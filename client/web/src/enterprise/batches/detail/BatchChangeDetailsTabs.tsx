@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 
 import * as H from 'history'
 import ArchiveIcon from 'mdi-react/ArchiveIcon'
@@ -93,6 +93,12 @@ export const BatchChangeDetailsTabs: React.FunctionComponent<BatchChangeDetailsT
             settingsCascade.final.experimentalFeatures?.batchChangesExecution) ??
         false
 
+    const executingCount = useMemo(
+        () =>
+            batchChange.batchSpecs.nodes.filter(node => node.state === 'PROCESSING' || node.state === 'QUEUED').length,
+        [batchChange.batchSpecs.nodes]
+    )
+
     return (
         <BatchChangeTabs history={history} location={location} initialTab={initialTab}>
             <BatchChangeTabList>
@@ -131,7 +137,14 @@ export const BatchChangeDetailsTabs: React.FunctionComponent<BatchChangeDetailsT
                             <Icon className="text-muted mr-1" as={FileDocumentIcon} />{' '}
                             <span className="text-content" data-tab-content="Executions">
                                 Executions
-                            </span>
+                            </span>{' '}
+                            <Badge
+                                variant={executingCount === 0 ? 'secondary' : 'warning'}
+                                pill={true}
+                                className="ml-1"
+                            >
+                                {executingCount} {batchChange.batchSpecs.pageInfo.hasNextPage && <> + </>}
+                            </Badge>
                         </span>
                     </BatchChangeTab>
                 )}
