@@ -24,6 +24,7 @@ export interface TemporarySettingsSchema {
     'integrations.jetbrains.lastDetectionTimestamp': number
     'cta.browserExtensionAlertDismissed': boolean
     'cta.ideExtensionAlertDismissed': boolean
+    'batches.downloadSpecModal': boolean
 }
 
 /**
