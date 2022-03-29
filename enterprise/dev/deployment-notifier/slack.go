@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"text/template"
@@ -15,12 +14,12 @@ import (
 	"github.com/sourcegraph/sourcegraph/lib/errors"
 )
 
-var slackTemplate = `:truck: *{{.Environment}}* deployment (<{{.BuildURL}}|build>)
+var slackTemplate = `:arrow_left: *{{.Environment}}* deployment (<{{.BuildURL}}|build>)
 
-- Applications:
+- Services:
 {{- range .Services }}
     - ` + "`" + `{{ . }}` + "`" + `
-{{- end }} 
+{{- end }}
 
 - Pull Requests:
 {{- range .PullRequests }}
@@ -40,7 +39,7 @@ type pullRequestPresenter struct {
 	WebURL        string
 }
 
-func slackSummary(ctx context.Context, teammates team.TeammateResolver, report *report) (string, error) {
+func slackSummary(ctx context.Context, teammates team.TeammateResolver, report *DeploymentReport, traceURL string) (string, error) {
 	presenter := &slackSummaryPresenter{
 		Environment: report.Environment,
 		BuildURL:    report.BuildkiteBuildURL,
@@ -48,18 +47,26 @@ func slackSummary(ctx context.Context, teammates team.TeammateResolver, report *
 	}
 
 	for _, pr := range report.PullRequests {
-		user := pr.GetUser()
-		if user == nil {
-			return "", errors.Newf("pull request %d has no user", pr.GetNumber())
+		var authorSlackID string
+		for _, label := range pr.Labels {
+			if *label.Name == "notify-on-deploy" {
+				user := pr.GetUser()
+				if user == nil {
+					return "", errors.Newf("pull request %d has no user", pr.GetNumber())
+				}
+				teammate, err := teammates.ResolveByGitHubHandle(ctx, user.GetLogin())
+				if err != nil {
+					return "", err
+				}
+				authorSlackID = fmt.Sprintf("<@%s>", teammate.SlackID)
+				break
+			}
 		}
-		teammate, err := teammates.ResolveByGitHubHandle(ctx, user.GetLogin())
-		if err != nil {
-			return "", err
-		}
+
 		presenter.PullRequests = append(presenter.PullRequests, pullRequestPresenter{
 			Name:          pr.GetTitle(),
 			WebURL:        pr.GetHTMLURL(),
-			AuthorSlackID: fmt.Sprintf("<@%s>", teammate.SlackID),
+			AuthorSlackID: authorSlackID,
 		})
 	}
 
@@ -71,6 +78,13 @@ func slackSummary(ctx context.Context, teammates team.TeammateResolver, report *
 	err = tmpl.Execute(&sb, presenter)
 	if err != nil {
 		return "", err
+	}
+
+	if traceURL != "" {
+		_, err = sb.WriteString(fmt.Sprintf("\n<%s|Deployment trace>", traceURL))
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return sb.String(), nil
@@ -92,22 +106,26 @@ func postSlackUpdate(webhook string, summary string) error {
 		Text *slackText `json:"text,omitempty"`
 	}
 
+	var blocks []slackBlock
+	for _, s := range strings.Split(summary, "\n\n") {
+		blocks = append(blocks, slackBlock{
+			Type: "section",
+			Text: &slackText{
+				Type: "mrkdwn",
+				Text: s,
+			},
+		})
+	}
+
 	// Generate request
 	body, err := json.MarshalIndent(struct {
 		Blocks []slackBlock `json:"blocks"`
 	}{
-		Blocks: []slackBlock{{
-			Type: "section",
-			Text: &slackText{
-				Type: "mrkdwn",
-				Text: summary,
-			},
-		}},
+		Blocks: blocks,
 	}, "", "  ")
 	if err != nil {
 		return errors.Newf("MarshalIndent: %w", err)
 	}
-	log.Println("slackBody: ", string(body))
 
 	req, err := http.NewRequest(http.MethodPost, webhook, bytes.NewBuffer(body))
 	if err != nil {
@@ -130,7 +148,7 @@ func postSlackUpdate(webhook string, summary string) error {
 	}
 	defer resp.Body.Close()
 	if buf.String() != "ok" {
-		return err
+		return errors.Newf("failed to post on slack: %q", buf.String())
 	}
 	return err
 }
