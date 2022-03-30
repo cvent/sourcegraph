@@ -173,7 +173,7 @@ This section is aimed at providing high-level guidance on deploying Sourcegraph 
 
 ### Configure Sourcegraph on Google Kubernetes Engine (GKE)
 
-#### Prerequisites
+#### Prerequisites {#gke-prerequisites}
 
 You need to have a GKE cluster (>=1.19) with the following addons enabled:
 
@@ -184,7 +184,7 @@ You need to have a GKE cluster (>=1.19) with the following addons enabled:
 
 Your account should have sufficient access equivalent to the `cluster-admin` ClusterRole.
 
-#### Steps
+#### Steps {#gke-steps}
 
 > [Container-native load balancing] is only available on VPC-native cluster. For legacy clusters, [learn more](https://cloud.google.com/kubernetes-engine/docs/how-to/load-balance-ingress).
 
@@ -262,7 +262,7 @@ frontend:
 
 ### Configure Sourcegraph on Elastic Kubernetes Service (EKS)
 
-#### Prerequisites
+#### Prerequisites {#eks-prerequisites}
 
 You need to have a EKS cluster (>=1.19) with the following addons enabled:
 
@@ -273,7 +273,7 @@ You need to have a EKS cluster (>=1.19) with the following addons enabled:
 
 Your account should have sufficient access equivalent to the `cluster-admin` ClusterRole.
 
-#### Steps
+#### Steps {#eks-steps}
 
 Create an override file with the following values. We configure Ingress to use [AWS Load Balancer Controller] to expose Sourcegraph publicly on a domain of your choosing and Storage Class to use [AWS EBS CSI driver].
 
@@ -322,14 +322,14 @@ frontend:
       alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-west-2:xxxxx:certificate/xxxxxxx
 ```
 
-#### References
+#### References {#eks-references}
 
 - [Enable TLS with AWS-managed certificate](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/ingress/annotations/#ssl)
 - [Supported AWS load balancer annotations](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/ingress/annotations)
 
 ### Configure Sourcegraph on Azure Managed Kubernetes Service (AKS)
 
-#### Prerequisites
+#### Prerequisites {#aks-prerequisites}
 
 You need to have a AKS cluster (>=1.19) with the following addons enabled:
 
@@ -340,7 +340,7 @@ You need to have a AKS cluster (>=1.19) with the following addons enabled:
 
 Your account should have sufficient access equivalent to the `cluster-admin` ClusterRole.
 
-#### Steps
+#### Steps {#aks-steps}
 
 Create an override file with the following values. We configure Ingress to use [Application Gateway](https://azure.microsoft.com/en-us/services/application-gateway) to expose Sourcegraph publicly on a domain of your choosing and Storage Class to use [Azure Disk CSI driver](https://docs.microsoft.com/en-us/azure/aks/azure-disk-csi).
 
@@ -391,7 +391,7 @@ frontend:
       appgw.ingress.kubernetes.io/appgw-ssl-certificate: azure-key-vault-managed-ssl-cert
 ```
 
-#### References
+#### References {#aks-references}
 
 - [Expose an AKS service over HTTP or HTTPS using Application Gateway](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-expose-service-over-http-https)
 - [Supported Azure Application Gateway Ingress Controller annotations](https://azure.github.io/application-gateway-kubernetes-ingress/annotations/)
@@ -400,7 +400,7 @@ frontend:
 
 ### Configure Sourcegraph on other Cloud providers or on-prem
 
-#### Prerequisites
+#### Prerequisites {#others-prerequisites}
 
 You need to have a Kubernetes cluster (>=1.19) with the following components installed:
 
@@ -409,7 +409,7 @@ You need to have a Kubernetes cluster (>=1.19) with the following components ins
 
 Your account should have sufficient access equivalent to the `cluster-admin` ClusterRole.
 
-#### Steps
+#### Steps {#others-steps}
 
 Read <https://kubernetes.io/docs/concepts/storage/storage-classes/> to configure the `storageClass.provisioner` and `storageClass.parameters` fields for your cloud provider or consult documentation of the storage solution in your on-prem environment.
 
