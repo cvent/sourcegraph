@@ -1,0 +1,31 @@
+name: publish-oss
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        required: true
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17'
+      - name: Remove enterprise directories
+        run: rm -rf enterprise client/web/src/enterprise
+      - run: ./cmd/server/pre-build.sh
+      - run: mkdir annotations
+      - run: sudo apt-get install -y musl-tools
+      - run: ./cmd/server/build.sh
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+          IMAGE: ghcr.io/cvent/sourcegraph-server-oss:${{ github.event.inputs.version }}
+      - run: echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: docker push ghcr.io/cvent/sourcegraph-server-oss:${{ github.event.inputs.version }}
