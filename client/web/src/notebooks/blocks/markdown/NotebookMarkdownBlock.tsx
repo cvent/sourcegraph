@@ -1,22 +1,22 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react'
 
-import { defaultKeymap, indentWithTab } from '@codemirror/commands'
-import { tags, HighlightStyle, classHighlightStyle } from '@codemirror/highlight'
-import { history } from '@codemirror/history'
+import { defaultKeymap, indentWithTab, history, historyKeymap } from '@codemirror/commands'
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown'
-import { indentUnit } from '@codemirror/language'
+import { indentUnit, HighlightStyle, syntaxHighlighting } from '@codemirror/language'
 import { Extension } from '@codemirror/state'
 import { EditorView, keymap } from '@codemirror/view'
+import { classHighlighter, tags } from '@lezer/highlight'
+import { mdiPlayCircleOutline, mdiPencil } from '@mdi/js'
 import classNames from 'classnames'
-import PencilIcon from 'mdi-react/PencilIcon'
-import PlayCircleOutlineIcon from 'mdi-react/PlayCircleOutlineIcon'
 
-import { useCodeMirror } from '@sourcegraph/shared/src/components/CodeMirrorEditor'
+import { changeListener } from '@sourcegraph/search-ui'
+import { useCodeMirror, editorHeight } from '@sourcegraph/shared/src/components/CodeMirrorEditor'
 import { Markdown } from '@sourcegraph/shared/src/components/Markdown'
 import { ThemeProps } from '@sourcegraph/shared/src/theme'
 import { Icon } from '@sourcegraph/wildcard'
 
 import { BlockProps, MarkdownBlock } from '../..'
+import { focusEditor } from '../../codemirror-utils'
 import { BlockMenuAction } from '../menu/NotebookBlockMenu'
 import { useCommonBlockMenuActions } from '../menu/useCommonBlockMenuActions'
 import { NotebookBlock } from '../NotebookBlock'
@@ -69,28 +69,39 @@ const staticExtensions: Extension[] = [
         },
         indentWithTab,
     ]),
+    keymap.of(historyKeymap),
     keymap.of(defaultKeymap),
     EditorView.lineWrapping,
     markdown({ base: markdownLanguage }),
-    classHighlightStyle,
-    HighlightStyle.define([
-        { tag: tags.monospace, class: styles.markdownCode },
-        { tag: tags.url, class: styles.markdownCode },
-    ]),
+    syntaxHighlighting(classHighlighter),
+    syntaxHighlighting(
+        HighlightStyle.define([
+            { tag: tags.monospace, class: styles.markdownCode },
+            { tag: tags.url, class: styles.markdownCode },
+        ])
+    ),
+    editorHeight({ maxHeight: '60rem' }),
 ]
 
-function focusInput(editor: EditorView): void {
-    editor.focus()
-    editor.dispatch({
-        selection: { anchor: editor.state.doc.length },
-        scrollIntoView: true,
-    })
+interface NotebookMarkdownBlockProps extends BlockProps<MarkdownBlock>, ThemeProps {
+    isEmbedded?: boolean
 }
 
-interface NotebookMarkdownBlockProps extends BlockProps<MarkdownBlock>, ThemeProps {}
-
-export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBlockProps> = React.memo(
-    ({ id, input, output, isSelected, isLightTheme, isReadOnly, onBlockInputChange, onRunBlock, ...props }) => {
+export const NotebookMarkdownBlock: React.FunctionComponent<
+    React.PropsWithChildren<NotebookMarkdownBlockProps>
+> = React.memo(
+    ({
+        id,
+        input,
+        output,
+        isSelected,
+        isLightTheme,
+        isReadOnly,
+        isEmbedded,
+        onBlockInputChange,
+        onRunBlock,
+        ...props
+    }) => {
         const [isEditing, setIsEditing] = useState(!isReadOnly && input.initialFocusInput)
         const [container, setContainer] = useState<HTMLDivElement | null>(null)
 
@@ -113,11 +124,7 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
                         run: runBlock,
                     },
                 ]),
-                EditorView.updateListener.of(update => {
-                    if (update.docChanged) {
-                        onInputChange(update.state.sliceDoc())
-                    }
-                }),
+                changeListener(onInputChange),
                 staticExtensions,
             ],
             [runBlock, onInputChange]
@@ -133,7 +140,7 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
 
         useEffect(() => {
             if (editor) {
-                focusInput(editor)
+                focusEditor(editor)
             }
         }, [isEditing, editor])
 
@@ -146,14 +153,14 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
                     ? {
                           type: 'button',
                           label: 'Render',
-                          icon: <Icon as={PlayCircleOutlineIcon} />,
+                          icon: <Icon aria-hidden={true} svgPath={mdiPlayCircleOutline} />,
                           onClick: runBlock,
                           keyboardShortcutLabel: `${modifierKeyLabel} + ↵`,
                       }
                     : {
                           type: 'button',
                           label: 'Edit',
-                          icon: <Icon as={PencilIcon} />,
+                          icon: <Icon aria-hidden={true} svgPath={mdiPencil} />,
                           onClick: editMarkdown,
                           keyboardShortcutLabel: '↵',
                       },
@@ -172,7 +179,7 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
                 'aria-label': 'Notebook markdown block',
                 isInputVisible: isEditing,
                 setIsInputVisible: setIsEditing,
-                focusInput: () => editor && focusInput(editor),
+                focusInput: () => editor && focusEditor(editor),
                 ...props,
             }),
             [id, isEditing, isReadOnly, isSelected, menuActions, onBlockInputChange, onRunBlock, editor, props]
@@ -183,7 +190,7 @@ export const NotebookMarkdownBlock: React.FunctionComponent<NotebookMarkdownBloc
         if (!isEditing) {
             return (
                 <NotebookBlock {...notebookBlockProps} onDoubleClick={editMarkdown}>
-                    <div className={styles.output} data-testid="output">
+                    <div className={classNames(styles.output, isEmbedded && styles.isEmbedded)} data-testid="output">
                         <Markdown className={styles.markdown} dangerousInnerHTML={output ?? ''} />
                     </div>
                 </NotebookBlock>

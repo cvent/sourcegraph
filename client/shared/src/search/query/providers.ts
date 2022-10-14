@@ -1,17 +1,16 @@
 import * as Monaco from 'monaco-editor'
 import { Observable, fromEventPattern, of } from 'rxjs'
-import { map, takeUntil, switchMap, delay } from 'rxjs/operators'
+import { map, takeUntil } from 'rxjs/operators'
 
 import { SearchPatternType } from '../../graphql-operations'
-import { SearchMatch } from '../stream'
+import { isSearchMatchOfType, SearchMatch } from '../stream'
 
-import { getCompletionItems, REPO_DEPS_PREDICATE_REGEX } from './completion'
+import { getCompletionItems } from './completion'
 import { getMonacoTokens } from './decoratedToken'
-import { FilterType } from './filters'
 import { getHoverResult } from './hover'
+import { createCancelableFetchSuggestions, getSuggestionQuery } from './providers-utils'
 import { scanSearchQuery } from './scanner'
-import { Filter, KeywordKind, Token } from './token'
-import { isFilterType } from './validate'
+import { Token } from './token'
 
 interface SearchFieldProviders {
     tokens: Monaco.languages.TokensProvider
@@ -29,50 +28,6 @@ const SCANNER_STATE: Monaco.languages.IState = {
 
 const printable = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~'
 const latin1Alpha = 'ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ'
-
-function serializeFilters(tokens: Token[], filterTypes: FilterType[]): string {
-    return tokens
-        .filter((token): token is Filter => filterTypes.some(filterType => isFilterType(token, filterType)))
-        .map(filter => (filter.value ? `${filter.field.value}:${filter.value.value}` : ''))
-        .filter(serialized => !!serialized)
-        .join(' ')
-}
-
-const MAX_SUGGESTION_COUNT = 50
-const REPO_SUGGESTION_FILTERS = [FilterType.fork, FilterType.visibility, FilterType.archived]
-const FILE_SUGGESTION_FILTERS = [...REPO_SUGGESTION_FILTERS, FilterType.repo, FilterType.rev, FilterType.lang]
-
-export function getSuggestionQuery(tokens: Token[], tokenAtColumn: Token, disablePatternSuggestions?: boolean): string {
-    const hasAndOrOperators = tokens.some(
-        token => token.type === 'keyword' && (token.kind === KeywordKind.Or || token.kind === KeywordKind.And)
-    )
-
-    if (isFilterType(tokenAtColumn, FilterType.repo) && tokenAtColumn.value) {
-        const depsPredicateMatch = tokenAtColumn.value.value.match(REPO_DEPS_PREDICATE_REGEX)
-        const repoValue = depsPredicateMatch ? depsPredicateMatch[2] : tokenAtColumn.value.value
-        const relevantFilters =
-            !hasAndOrOperators && !depsPredicateMatch ? serializeFilters(tokens, REPO_SUGGESTION_FILTERS) : ''
-        return `${relevantFilters} repo:${repoValue} type:repo count:${MAX_SUGGESTION_COUNT}`.trimStart()
-    }
-
-    // For the cases below, we are not handling queries with and/or operators. This is because we would need to figure out
-    // for each filter which filters from the surrounding expression apply to it. For example, if we have a query: `repo:x file:y z OR repo:xx file:yy`
-    // and we want to get suggestions for the `file:yy` filter. We would only want to include file suggestions from the `xx` repo and not the `x` repo, because it
-    // is a part of a different expression.
-    if (hasAndOrOperators) {
-        return ''
-    }
-    if (isFilterType(tokenAtColumn, FilterType.file) && tokenAtColumn.value) {
-        const relevantFilters = serializeFilters(tokens, FILE_SUGGESTION_FILTERS)
-        return `${relevantFilters} file:${tokenAtColumn.value.value} type:path count:${MAX_SUGGESTION_COUNT}`.trimStart()
-    }
-    if (tokenAtColumn.type === 'pattern' && tokenAtColumn.value && !disablePatternSuggestions) {
-        const relevantFilters = serializeFilters(tokens, [...FILE_SUGGESTION_FILTERS, FilterType.file])
-        return `${relevantFilters} ${tokenAtColumn.value} type:symbol count:${MAX_SUGGESTION_COUNT}`.trimStart()
-    }
-
-    return ''
-}
 
 function getTokenAtColumn(tokens: Token[], column: number): Token | null {
     return tokens.find(({ range }) => range.start + 1 <= column && range.end + 1 >= column) ?? null
@@ -92,6 +47,8 @@ export function getProviders(
         isSourcegraphDotCom?: boolean
     }
 ): SearchFieldProviders {
+    const cancelableFetch = createCancelableFetchSuggestions(fetchSuggestions)
+
     return {
         tokens: {
             getInitialState: () => SCANNER_STATE,
@@ -121,7 +78,7 @@ export function getProviders(
         completion: {
             // An explicit list of trigger characters is needed for the Monaco editor to show completions.
             triggerCharacters: [...printable, ...latin1Alpha],
-            provideCompletionItems: (textModel, position, context, cancellationToken) => {
+            provideCompletionItems: (textModel, position, _context, cancellationToken) => {
                 const scanned = scanSearchQuery(
                     textModel.getValue(),
                     options.interpretComments ?? false,
@@ -131,29 +88,16 @@ export function getProviders(
                     return null
                 }
                 const tokenAtColumn = getTokenAtColumn(scanned.term, position.column)
-                if (!tokenAtColumn) {
-                    return null
-                }
 
-                return of(getSuggestionQuery(scanned.term, tokenAtColumn, options.disablePatternSuggestions))
-                    .pipe(
-                        // We use a delay here to implement a custom debounce. In the next step we check if the current
-                        // completion request was cancelled in the meantime (`token.isCancellationRequested`).
-                        // This prevents us from needlessly running multiple suggestion queries.
-                        delay(200),
-                        switchMap(query =>
-                            cancellationToken.isCancellationRequested
-                                ? Promise.resolve(null)
-                                : getCompletionItems(
-                                      tokenAtColumn,
-                                      position,
-                                      fetchSuggestions(query),
-                                      options.globbing,
-                                      options.isSourcegraphDotCom
-                                  )
-                        )
-                    )
-                    .toPromise()
+                return getCompletionItems(
+                    tokenAtColumn,
+                    position,
+                    (token, type) =>
+                        cancelableFetch(getSuggestionQuery(scanned.term, token, type), listener =>
+                            cancellationToken.onCancellationRequested(listener)
+                        ).then(matches => matches.filter(isSearchMatchOfType(type))),
+                    options
+                )
             },
         },
     }

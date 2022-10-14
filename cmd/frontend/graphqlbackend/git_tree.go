@@ -11,7 +11,6 @@ import (
 	"github.com/sourcegraph/sourcegraph/internal/api"
 	"github.com/sourcegraph/sourcegraph/internal/authz"
 	"github.com/sourcegraph/sourcegraph/internal/trace/ot"
-	"github.com/sourcegraph/sourcegraph/internal/vcs/git"
 )
 
 func (r *GitTreeEntryResolver) IsRoot() bool {
@@ -43,15 +42,7 @@ func (r *GitTreeEntryResolver) entries(ctx context.Context, args *gitTreeEntryCo
 	span, ctx := ot.StartSpanFromContext(ctx, "tree.entries")
 	defer span.Finish()
 
-	entries, err := git.ReadDir(
-		ctx,
-		r.db,
-		authz.DefaultSubRepoPermsChecker,
-		r.commit.repoResolver.RepoName(),
-		api.CommitID(r.commit.OID()),
-		r.Path(),
-		r.isRecursive || args.Recursive,
-	)
+	entries, err := r.gitserverClient.ReadDir(ctx, authz.DefaultSubRepoPermsChecker, r.commit.repoResolver.RepoName(), api.CommitID(r.commit.OID()), r.Path(), r.isRecursive || args.Recursive)
 	if err != nil {
 		if strings.Contains(err.Error(), "file does not exist") { // TODO proper error value
 			// empty tree is not an error
@@ -70,7 +61,7 @@ func (r *GitTreeEntryResolver) entries(ctx context.Context, args *gitTreeEntryCo
 	for _, entry := range entries {
 		// Apply any additional filtering
 		if filter == nil || filter(entry) {
-			l = append(l, NewGitTreeEntryResolver(r.db, r.commit, entry))
+			l = append(l, NewGitTreeEntryResolver(r.db, r.gitserverClient, r.commit, entry))
 		}
 	}
 

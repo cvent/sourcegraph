@@ -2,6 +2,8 @@ import { AxePuppeteer } from '@axe-core/puppeteer'
 import type { Result, NodeResult, RunOptions } from 'axe-core'
 import { Page } from 'puppeteer'
 
+import { logger } from '@sourcegraph/common'
+
 /**
  * Takes a list of Axe violation nodes and formats them into a readable string.
  */
@@ -47,7 +49,16 @@ export const ACCESSIBILITY_AUDIT_IGNORE_CLASS = '.a11y-ignore'
  */
 export async function accessibilityAudit(page: Page, config: AccessibilityAuditConfiguration = {}): Promise<void> {
     const { options, mode = 'fail' } = config
-    const axe = new AxePuppeteer(page).exclude(ACCESSIBILITY_AUDIT_IGNORE_CLASS)
+    const axe = new AxePuppeteer(page)
+        .exclude(ACCESSIBILITY_AUDIT_IGNORE_CLASS)
+        // https://github.com/microsoft/monaco-editor/issues/2448
+        .exclude('.monaco-status')
+        /*
+         * TODO: Design review on some CodeMirror query input features to choose
+         * a color that fulfill contrast requirements:
+         * https://github.com/sourcegraph/sourcegraph/issues/36534
+         */
+        .exclude('.cm-content .cm-line')
 
     if (options) {
         axe.options(options)
@@ -65,6 +76,6 @@ export async function accessibilityAudit(page: Page, config: AccessibilityAuditC
             throw new Error(errorMessage)
         }
 
-        console.warn(errorMessage)
+        logger.warn(errorMessage)
     }
 }

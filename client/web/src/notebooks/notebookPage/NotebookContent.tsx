@@ -4,9 +4,9 @@ import { noop } from 'lodash'
 import { Observable } from 'rxjs'
 
 import { StreamingSearchResultsListProps } from '@sourcegraph/search-ui'
+import { AuthenticatedUser } from '@sourcegraph/shared/src/auth'
 import { ExtensionsControllerProps } from '@sourcegraph/shared/src/extensions/controller'
 import { PlatformContextProps } from '@sourcegraph/shared/src/platform/context'
-import { NotebookBlock } from '@sourcegraph/shared/src/schema'
 import { TelemetryProps } from '@sourcegraph/shared/src/telemetry/telemetryService'
 import { ThemeProps } from '@sourcegraph/shared/src/theme'
 
@@ -20,19 +20,24 @@ export interface NotebookContentProps
     extends SearchStreamingProps,
         ThemeProps,
         TelemetryProps,
-        Omit<StreamingSearchResultsListProps, 'allExpanded' | 'extensionsController' | 'platformContext'>,
-        PlatformContextProps<'sourcegraphURL' | 'requestGraphQL' | 'urlToFile' | 'settings' | 'forceUpdateTooltip'>,
+        Omit<
+            StreamingSearchResultsListProps,
+            'allExpanded' | 'extensionsController' | 'platformContext' | 'executedQuery'
+        >,
+        PlatformContextProps<'sourcegraphURL' | 'requestGraphQL' | 'urlToFile' | 'settings'>,
         ExtensionsControllerProps<'extHostAPI' | 'executeCommand'> {
+    authenticatedUser: AuthenticatedUser | null
     globbing: boolean
     viewerCanManage: boolean
-    blocks: NotebookBlock[]
+    blocks: NotebookFields['blocks']
     exportedFileName: string
     isEmbedded?: boolean
+    outlineContainerElement?: HTMLElement | null
     onUpdateBlocks: (blocks: Block[]) => void
     onCopyNotebook: (props: Omit<CopyNotebookProps, 'title'>) => Observable<NotebookFields>
 }
 
-export const NotebookContent: React.FunctionComponent<NotebookContentProps> = React.memo(
+export const NotebookContent: React.FunctionComponent<React.PropsWithChildren<NotebookContentProps>> = React.memo(
     ({
         viewerCanManage,
         blocks,
@@ -51,6 +56,8 @@ export const NotebookContent: React.FunctionComponent<NotebookContentProps> = Re
         settingsCascade,
         platformContext,
         extensionsController,
+        outlineContainerElement,
+        isEmbedded,
     }) => {
         const initializerBlocks: BlockInit[] = useMemo(
             () =>
@@ -102,6 +109,8 @@ export const NotebookContent: React.FunctionComponent<NotebookContentProps> = Re
                 onSerializeBlocks={viewerCanManage ? onUpdateBlocks : noop}
                 exportedFileName={exportedFileName}
                 onCopyNotebook={onCopyNotebook}
+                outlineContainerElement={outlineContainerElement}
+                isEmbedded={isEmbedded}
             />
         )
     }

@@ -5,48 +5,38 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
 	"net/http"
 	"net/url"
 	"path"
-	"time"
 
-	"github.com/inconshreveable/log15"
+	"github.com/sourcegraph/sourcegraph/internal/conf/reposource"
 	"golang.org/x/mod/module"
-	"golang.org/x/time/rate"
 
 	"github.com/sourcegraph/sourcegraph/internal/errcode"
 	"github.com/sourcegraph/sourcegraph/internal/httpcli"
 	"github.com/sourcegraph/sourcegraph/internal/ratelimit"
 	"github.com/sourcegraph/sourcegraph/lib/errors"
-	"github.com/sourcegraph/sourcegraph/schema"
 )
 
 // A Client to Go module proxies.
 type Client struct {
 	urls    []string // list of proxy URLs
 	cli     httpcli.Doer
-	limiter *rate.Limiter
+	limiter *ratelimit.InstrumentedLimiter
 }
 
-// NewClient returns a new Client for the given configuration.
-func NewClient(config *schema.GoModulesConnection, cli httpcli.Doer) *Client {
-	var requestsPerHour float64
-	if config.RateLimit == nil || !config.RateLimit.Enabled {
-		requestsPerHour = math.Inf(1)
-	} else {
-		requestsPerHour = config.RateLimit.RequestsPerHour
-	}
-
+// NewClient returns a new Client for the given urls. urn represents the
+// unique urn of the external service this client's config is from.
+func NewClient(urn string, urls []string, cli httpcli.Doer) *Client {
 	return &Client{
-		urls:    config.Urls,
+		urls:    urls,
 		cli:     cli,
-		limiter: rate.NewLimiter(rate.Limit(requestsPerHour/3600.0), 100),
+		limiter: ratelimit.DefaultRegistry.Get(urn),
 	}
 }
 
 // GetVersion gets a single version of the given module if it exists.
-func (c *Client) GetVersion(ctx context.Context, mod, version string) (*module.Version, error) {
+func (c *Client) GetVersion(ctx context.Context, mod reposource.PackageName, version string) (*module.Version, error) {
 	var paths []string
 	if version != "" {
 		escapedVersion, err := module.EscapeVersion(version)
@@ -68,11 +58,11 @@ func (c *Client) GetVersion(ctx context.Context, mod, version string) (*module.V
 		return nil, err
 	}
 
-	return &module.Version{Path: mod, Version: v.Version}, nil
+	return &module.Version{Path: string(mod), Version: v.Version}, nil
 }
 
 // GetZip returns the zip archive bytes of the given module and version.
-func (c *Client) GetZip(ctx context.Context, mod, version string) ([]byte, error) {
+func (c *Client) GetZip(ctx context.Context, mod reposource.PackageName, version string) ([]byte, error) {
 	escapedVersion, err := module.EscapeVersion(version)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to escape version")
@@ -86,13 +76,8 @@ func (c *Client) GetZip(ctx context.Context, mod, version string) ([]byte, error
 	return zipBytes, nil
 }
 
-// rateLimitingWaitThreshold is maximum rate limiting wait duration after which
-// a warning log is produced to help site admins debug why syncing may be taking
-// longer than expected.
-const rateLimitingWaitThreshold = 200 * time.Millisecond
-
-func (c *Client) get(ctx context.Context, mod string, paths ...string) (respBody []byte, err error) {
-	escapedMod, err := module.EscapePath(mod)
+func (c *Client) get(ctx context.Context, mod reposource.PackageName, paths ...string) (respBody []byte, err error) {
+	escapedMod, err := module.EscapePath(string(mod))
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to escape module path")
 	}
@@ -103,15 +88,8 @@ func (c *Client) get(ctx context.Context, mod string, paths ...string) (respBody
 	)
 
 	for _, baseURL := range c.urls {
-		limiter := ratelimit.DefaultRegistry.GetOrSet(baseURL, c.limiter)
-
-		startWait := time.Now()
-		if err = limiter.Wait(ctx); err != nil {
+		if err = c.limiter.Wait(ctx); err != nil {
 			return nil, err
-		}
-
-		if d := time.Since(startWait); d > rateLimitingWaitThreshold {
-			log15.Warn("go modules proxy client self-enforced API rate limit: request delayed longer than expected due to rate limit", "delay", d)
 		}
 
 		reqURL, err = url.Parse(baseURL)

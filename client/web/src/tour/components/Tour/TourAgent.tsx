@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState, useMemo } from 'react'
 
-import CheckCircleIcon from 'mdi-react/CheckCircleIcon'
+import { mdiCheckCircle } from '@mdi/js'
 import ReactDOM from 'react-dom'
 import { useLocation } from 'react-router-dom'
 
@@ -18,10 +18,15 @@ interface TourAgentProps extends TelemetryProps {
     onStepComplete: (step: TourTaskStepType) => void
 }
 
+export function useTourQueryParameters(): ReturnType<typeof parseURIMarkers> {
+    const location = useLocation()
+    return useMemo(() => parseURIMarkers(location.search), [location])
+}
+
 /**
  * Component to track TourTaskStepType.completeAfterEvents and show info box for steps.
  */
-export const TourAgent: React.FunctionComponent<TourAgentProps> = React.memo(
+export const TourAgent: React.FunctionComponent<React.PropsWithChildren<TourAgentProps>> = React.memo(
     ({ tasks, telemetryService, onStepComplete }) => {
         // Agent 1: Track completion
         useEffect(() => {
@@ -37,35 +42,32 @@ export const TourAgent: React.FunctionComponent<TourAgentProps> = React.memo(
         // Agent 2: Track info panel
         const [info, setInfo] = useState<TourTaskStepType['info'] | undefined>()
 
-        const location = useLocation()
+        const tourQueryParameters = useTourQueryParameters()
 
         useEffect(() => {
-            const { isTour, stepId } = parseURIMarkers(location.search)
-            if (!isTour || !stepId) {
-                return
-            }
+            const info = tasks.flatMap(task => task.steps).find(step => tourQueryParameters.stepId === step.id)?.info
+            setInfo(info)
+        }, [tasks, tourQueryParameters.stepId])
 
-            const info = tasks.flatMap(task => task.steps).find(step => stepId === step.id)?.info
+        const infoContainerReference = useRef(document.querySelector('#' + GETTING_STARTED_TOUR_MARKER))
+        useEffect(() => {
             if (info) {
-                setInfo(info)
+                infoContainerReference.current?.classList.remove('d-none')
+            } else {
+                infoContainerReference.current?.classList.add('d-none')
             }
-        }, [tasks, location])
+        }, [info])
 
-        if (!info) {
-            return null
-        }
-
-        const domNode = document.querySelector('.' + GETTING_STARTED_TOUR_MARKER)
-        if (!domNode) {
+        if (!info || !infoContainerReference.current) {
             return null
         }
 
         return ReactDOM.createPortal(
             <div className={styles.infoPanel}>
-                <Icon as={CheckCircleIcon} className={styles.infoIcon} />
+                <Icon className={styles.infoIcon} aria-hidden={true} svgPath={mdiCheckCircle} />
                 <span>{info}</span>
             </div>,
-            domNode
+            infoContainerReference.current
         )
     }
 )

@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from 'react'
+import { FC, useContext, useMemo } from 'react'
 
 import { useRouteMatch } from 'react-router'
 import { Redirect } from 'react-router-dom'
@@ -7,8 +7,7 @@ import { TelemetryProps } from '@sourcegraph/shared/src/telemetry/telemetryServi
 import { LoadingSpinner, useObservable } from '@sourcegraph/wildcard'
 
 import { PageTitle } from '../../../../../components/PageTitle'
-import { CodeInsightsBackendContext } from '../../../core/backend/code-insights-backend-context'
-import { ALL_INSIGHTS_DASHBOARD } from '../../../core/constants'
+import { CodeInsightsBackendContext, ALL_INSIGHTS_DASHBOARD } from '../../../core'
 
 import { DashboardsContent } from './components/dashboards-content/DashboardsContent'
 
@@ -22,12 +21,17 @@ export interface DashboardsContentPageProps extends TelemetryProps {
     dashboardID?: string
 }
 
-export const DashboardsContentPage: React.FunctionComponent<DashboardsContentPageProps> = props => {
+export const DashboardsContentPage: FC<DashboardsContentPageProps> = props => {
     const { dashboardID, telemetryService } = props
     const { url } = useRouteMatch()
 
     const { getDashboards } = useContext(CodeInsightsBackendContext)
     const dashboards = useObservable(useMemo(() => getDashboards(), [getDashboards]))
+
+    const currentDashboard = useMemo(() => dashboards?.find(dashboard => dashboard.id === dashboardID), [
+        dashboardID,
+        dashboards,
+    ])
 
     if (!dashboardID) {
         // In case if url doesn't have a dashboard id we should fall back on
@@ -43,12 +47,14 @@ export const DashboardsContentPage: React.FunctionComponent<DashboardsContentPag
         )
     }
 
-    const currentDashboard = dashboards.find(dashboard => dashboard.id === dashboardID)
-
     return (
         <>
             <PageTitle title={`${currentDashboard?.title || ''} - Code Insights`} />
-            <DashboardsContent telemetryService={telemetryService} dashboardID={dashboardID} dashboards={dashboards} />
+            <DashboardsContent
+                currentDashboard={currentDashboard}
+                dashboards={dashboards}
+                telemetryService={telemetryService}
+            />
         </>
     )
 }

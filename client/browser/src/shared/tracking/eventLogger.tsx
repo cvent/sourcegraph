@@ -5,12 +5,10 @@ import * as uuid from 'uuid'
 import { PlatformContext } from '@sourcegraph/shared/src/platform/context'
 import { TelemetryService } from '@sourcegraph/shared/src/telemetry/telemetryService'
 
-import { background } from '../../browser-extension/web-extension-api/runtime'
 import { storage } from '../../browser-extension/web-extension-api/storage'
-import { UserEvent } from '../../graphql-operations'
-import { logUserEvent, logEvent } from '../backend/userEvents'
-import { isBackground, isInPage } from '../context'
-import { getExtensionVersion, getPlatformName, isDefaultSourcegraphUrl } from '../util/context'
+import { logEvent } from '../backend/userEvents'
+import { isInPage } from '../context'
+import { getExtensionVersion, getPlatformName } from '../util/context'
 
 const uidKey = 'sourcegraphAnonymousUid'
 
@@ -131,32 +129,13 @@ export class EventLogger implements TelemetryService {
     /**
      * Log a user action on the associated Sourcegraph instance
      */
-    private async logEvent(
-        event: string,
-        eventProperties?: any,
-        publicArgument?: any,
-        userEvent?: UserEvent
-    ): Promise<void> {
+    private async logEvent(event: string, eventProperties?: any, publicArgument?: any): Promise<void> {
         const anonUserId = await this.getAnonUserID()
-        if (userEvent) {
-            logUserEvent(userEvent, anonUserId, this.sourcegraphURL, this.requestGraphQL)
-        }
-
-        const firstSourceURL = isDefaultSourcegraphUrl(this.sourcegraphURL)
-            ? (
-                  await (isBackground ? browser.cookies.get : background.getCookie)({
-                      url: this.sourcegraphURL,
-                      name: 'sourcegraphSourceUrl',
-                  })
-              )?.value
-            : undefined
-
         logEvent(
             {
                 name: event,
                 userCookieID: anonUserId,
                 url: this.sourcegraphURL,
-                firstSourceURL,
                 argument: { platform: this.platform, version: this.version, ...eventProperties },
                 publicArgument: { platform: this.platform, version: this.version, ...publicArgument },
             },
@@ -172,19 +151,7 @@ export class EventLogger implements TelemetryService {
      * @param eventName The ID of the action executed.
      */
     public async log(eventName: string, eventProperties?: any, publicArgument?: any): Promise<void> {
-        switch (eventName) {
-            case 'findReferences':
-                await this.logEvent(eventName, eventProperties, publicArgument, UserEvent.CODEINTELINTEGRATIONREFS)
-                break
-            case 'goToDefinition':
-            case 'goToDefinition.preloaded':
-            case 'hover':
-                await this.logEvent(eventName, eventProperties, publicArgument, UserEvent.CODEINTELINTEGRATION)
-                break
-            default:
-                await this.logEvent(eventName, eventProperties, publicArgument)
-                break
-        }
+        await this.logEvent(eventName, eventProperties, publicArgument)
     }
 
     /**

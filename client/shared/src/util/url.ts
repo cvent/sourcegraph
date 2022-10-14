@@ -5,7 +5,6 @@ import {
     findLineKeyInSearchParameters,
     formatSearchParameters,
     LineOrPositionOrRange,
-    replaceRange,
     toPositionOrRangeQueryParameter,
     toViewStateHash,
 } from '@sourcegraph/common'
@@ -15,7 +14,7 @@ import { WorkspaceRootWithMetadata } from '../api/extension/extensionHostApi'
 import { SearchPatternType } from '../graphql-operations'
 import { discreteValueAliases } from '../search/query/filters'
 import { findFilter, FilterKind } from '../search/query/query'
-import { appendContextFilter } from '../search/query/transformer'
+import { appendContextFilter, omitFilter } from '../search/query/transformer'
 
 export interface RepoSpec {
     /**
@@ -71,7 +70,7 @@ interface ComparisonSpec {
  * 1-indexed position in a blob.
  * Positions in URLs are 1-indexed.
  */
-interface UIPosition {
+export interface UIPosition {
     /** 1-indexed line number */
     line: number
 
@@ -83,7 +82,7 @@ interface UIPosition {
  * 1-indexed range in a blob.
  * Ranges in URLs are 1-indexed.
  */
-interface UIRange {
+export interface UIRange {
     start: UIPosition
     end: UIPosition
 }
@@ -440,9 +439,10 @@ export function toPrettyBlobURL(
         toPositionOrRangeQueryParameter(target)
     )
     const searchQuery = [...searchParameters].length > 0 ? `?${formatSearchParameters(searchParameters)}` : ''
-    return `/${encodeRepoRevision({ repoName: target.repoName, revision: target.revision })}/-/blob/${
-        target.filePath
-    }${searchQuery}${toViewStateHash(target.viewState)}`
+    return `/${encodeRepoRevision({
+        repoName: target.repoName,
+        revision: target.revision,
+    })}/-/blob/${encodeURIPathComponent(target.filePath)}${searchQuery}${toViewStateHash(target.viewState)}`
 }
 
 /**
@@ -537,9 +537,8 @@ export function buildSearchURLQuery(
 
     const globalPatternType = findFilter(queryParameter, 'patterntype', FilterKind.Global)
     if (globalPatternType?.value) {
-        const { start, end } = globalPatternType.range
         patternTypeParameter = globalPatternType.value.value
-        queryParameter = replaceRange(queryParameter, { start: Math.max(0, start - 1), end }).trim()
+        queryParameter = omitFilter(queryParameter, globalPatternType)
     }
 
     const globalCase = findFilter(queryParameter, 'case', FilterKind.Global)
@@ -547,7 +546,7 @@ export function buildSearchURLQuery(
         // When case:value is explicit in the query, override any previous value of caseParameter.
         const globalCaseParameterValue = globalCase.value.value
         caseParameter = discreteValueAliases.yes.includes(globalCaseParameterValue) ? 'yes' : 'no'
-        queryParameter = replaceRange(queryParameter, globalCase.range)
+        queryParameter = omitFilter(queryParameter, globalCase)
     }
 
     if (searchContextSpec) {
@@ -570,8 +569,10 @@ export function buildSearchURLQuery(
     return searchParameters.toString().replace(/%2F/g, '/').replace(/%3A/g, ':')
 }
 
-export function buildGetStartedURL(source: string, returnTo?: string): string {
-    const url = new URL('https://about.sourcegraph.com/get-started')
+export function buildGetStartedURL(source: string, returnTo?: string, forDotcom?: boolean): string {
+    // Still support directing to dotcom signup links when needed
+    const path = forDotcom ? 'https://sourcegraph.com/sign-up' : 'https://signup.sourcegraph.com'
+    const url = new URL(path)
     url.searchParams.set('utm_medium', 'inproduct')
     url.searchParams.set('utm_source', source)
     url.searchParams.set('utm_campaign', 'inproduct-cta')
@@ -581,4 +582,33 @@ export function buildGetStartedURL(source: string, returnTo?: string): string {
     }
 
     return url.toString()
+}
+
+/** The results of parsing a repo-revision string like "my/repo@my/revision". */
+export interface ParsedRepoRevision {
+    repoName: string
+
+    /** The URI-decoded revision (e.g., "my#branch" in "my/repo@my%23branch"). */
+    revision?: string
+
+    /** The raw revision (e.g., "my%23branch" in "my/repo@my%23branch"). */
+    rawRevision?: string
+}
+
+/**
+ * Parses a repo-revision string like "my/repo@my/revision" to the repo and revision components.
+ */
+export function parseRepoRevision(repoRevision: string): ParsedRepoRevision {
+    const firstAtSign = repoRevision.indexOf('@')
+    if (firstAtSign === -1) {
+        return { repoName: decodeURIComponent(repoRevision) }
+    }
+
+    const repository = repoRevision.slice(0, firstAtSign)
+    const revision = repoRevision.slice(firstAtSign + 1)
+    return {
+        repoName: decodeURIComponent(repository),
+        revision: revision && decodeURIComponent(revision),
+        rawRevision: revision,
+    }
 }

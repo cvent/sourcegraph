@@ -2,14 +2,15 @@ import assert from 'assert'
 
 import expect from 'expect'
 
+import { mixedSearchStreamEvents } from '@sourcegraph/search'
+import { accessibilityAudit } from '@sourcegraph/shared/src/testing/accessibility'
 import { Driver, createDriverForTest } from '@sourcegraph/shared/src/testing/driver'
 import { afterEachSaveScreenshotIfFailed } from '@sourcegraph/shared/src/testing/screenshotReporter'
 
 import { WebIntegrationTestContext, createWebIntegrationTestContext } from './context'
 import { commonWebGraphQlResults } from './graphQlResults'
 import { siteID, siteGQLID } from './jscontext'
-import { mixedSearchStreamEvents } from './streaming-search-mocks'
-import { percySnapshotWithVariants } from './utils'
+import { createEditorAPI, percySnapshotWithVariants } from './utils'
 
 describe('Code monitoring', () => {
     let driver: Driver
@@ -35,12 +36,13 @@ describe('Code monitoring', () => {
                     subjects: [
                         {
                             __typename: 'DefaultSettings',
+                            id: 'TestDefaultSettingsID',
                             settingsURL: null,
                             viewerCanAdminister: false,
                             latestSettings: {
                                 id: 0,
                                 contents: JSON.stringify({
-                                    experimentalFeatures: { showOnboardingTour: true, codeMonitoring: true },
+                                    experimentalFeatures: { codeMonitoring: true },
                                 }),
                             },
                         },
@@ -51,7 +53,7 @@ describe('Code monitoring', () => {
                             latestSettings: {
                                 id: 470,
                                 contents: JSON.stringify({
-                                    experimentalFeatures: { showOnboardingTour: true, codeMonitoring: true },
+                                    experimentalFeatures: { codeMonitoring: true },
                                 }),
                             },
                             settingsURL: '/site-admin/global-settings',
@@ -99,6 +101,7 @@ describe('Code monitoring', () => {
             }),
         })
         testContext.overrideSearchStreamEvents(mixedSearchStreamEvents)
+        testContext.overrideJsContext({ emailEnabled: true })
     })
     afterEachSaveScreenshotIfFailed(() => driver.page)
     afterEach(() => testContext?.dispose())
@@ -108,17 +111,20 @@ describe('Code monitoring', () => {
             await driver.page.goto(driver.sourcegraphBaseUrl + '/code-monitoring')
             await driver.page.waitForSelector('[data-testid="code-monitoring-page"]')
             await percySnapshotWithVariants(driver.page, 'Code monitor list')
+            await accessibilityAudit(driver.page)
         })
     })
 
     describe('Code monitoring form advances sequentially', () => {
         it('validates trigger query input', async () => {
             await driver.page.goto(driver.sourcegraphBaseUrl + '/code-monitoring/new')
-            await driver.page.waitForSelector('.test-name-input')
+            await driver.page.waitForSelector('[data-testid="name-input"]')
 
-            await percySnapshotWithVariants(driver.page, 'Code monitoring - Form')
+            // Screenshot test disabled: https://github.com/sourcegraph/sourcegraph/issues/41743
+            // await percySnapshotWithVariants(driver.page, 'Code monitoring - Form')
+            await accessibilityAudit(driver.page)
 
-            await driver.page.type('.test-name-input', 'test monitor')
+            await driver.page.type('[data-testid="name-input"]', 'test monitor')
 
             await driver.page.waitForSelector('.test-action-button-email')
             assert.strictEqual(
@@ -132,14 +138,11 @@ describe('Code monitoring', () => {
             await driver.page.waitForSelector('.test-trigger-button')
             await driver.page.click('.test-trigger-button')
 
-            await driver.page.waitForSelector('.test-trigger-input')
-            await driver.page.type('.test-trigger-input', 'foobar')
+            const input = await createEditorAPI(driver, '.test-trigger-input')
+            await input.append('foobar', 'type')
             await driver.page.waitForSelector('.test-is-invalid')
 
-            await driver.page.type('.test-trigger-input', ' type:diff')
-            await driver.page.waitForSelector('.test-is-invalid')
-
-            await driver.page.type('.test-trigger-input', ' repo:test')
+            await input.append(' type:diff', 'type')
             await driver.page.waitForSelector('.test-is-valid')
             await driver.page.waitForSelector('.test-preview-link')
             expect(
@@ -149,8 +152,8 @@ describe('Code monitoring', () => {
 
         it('disables the actions area until trigger is complete', async () => {
             await driver.page.goto(driver.sourcegraphBaseUrl + '/code-monitoring/new')
-            await driver.page.waitForSelector('.test-name-input')
-            await driver.page.type('.test-name-input', 'test monitor')
+            await driver.page.waitForSelector('[data-testid="name-input"]')
+            await driver.page.type('[data-testid="name-input"]', 'test monitor')
 
             await driver.page.waitForSelector('.test-action-button-email')
             assert.strictEqual(
@@ -164,8 +167,9 @@ describe('Code monitoring', () => {
             await driver.page.waitForSelector('.test-trigger-button')
             await driver.page.click('.test-trigger-button')
 
-            await driver.page.waitForSelector('.test-trigger-input')
-            await driver.page.type('.test-trigger-input', 'foobar type:diff repo:test')
+            const input = await createEditorAPI(driver, '.test-trigger-input')
+
+            await input.append('foobar type:diff repo:test', 'type')
             await driver.page.waitForSelector('.test-is-valid')
             await driver.page.waitForSelector('.test-preview-link')
             await driver.page.waitForSelector('.test-submit-trigger')
@@ -186,8 +190,8 @@ describe('Code monitoring', () => {
 
         it('disables submitting the code monitor area until trigger and action are complete', async () => {
             await driver.page.goto(driver.sourcegraphBaseUrl + '/code-monitoring/new')
-            await driver.page.waitForSelector('.test-name-input')
-            await driver.page.type('.test-name-input', 'test monitor')
+            await driver.page.waitForSelector('[data-testid="name-input"]')
+            await driver.page.type('[data-testid="name-input"]', 'test monitor')
 
             await driver.page.waitForSelector('.test-submit-monitor')
             assert.strictEqual(
@@ -201,8 +205,8 @@ describe('Code monitoring', () => {
             await driver.page.waitForSelector('.test-trigger-button')
             await driver.page.click('.test-trigger-button')
 
-            await driver.page.waitForSelector('.test-trigger-input')
-            await driver.page.type('.test-trigger-input', 'foobar type:diff repo:test')
+            const input = await createEditorAPI(driver, '.test-trigger-input')
+            await input.append('foobar type:diff repo:test', 'type')
             await driver.page.waitForSelector('.test-is-valid')
             await driver.page.waitForSelector('.test-preview-link')
             await driver.page.waitForSelector('.test-submit-trigger')

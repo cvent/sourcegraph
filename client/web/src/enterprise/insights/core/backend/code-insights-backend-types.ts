@@ -1,6 +1,8 @@
 import { Duration } from 'date-fns'
-import { LineChartContent } from 'sourcegraph'
 
+import { Series } from '@sourcegraph/wildcard'
+
+import { GroupByField } from '../../../../graphql-operations'
 import {
     RuntimeInsight,
     InsightDashboard,
@@ -8,8 +10,35 @@ import {
     CaptureGroupInsight,
     LangStatsInsight,
     InsightsDashboardOwner,
+    SearchBasedInsight,
+    ComputeInsight,
 } from '../types'
-import { SearchBackendBasedInsight, SearchRuntimeBasedInsight } from '../types/insight/types/search-insight'
+import { InsightContentType } from '../types/insight/common'
+
+export interface CategoricalChartContent<Datum> {
+    data: Datum[]
+    getDatumValue: (datum: Datum) => number
+    getDatumName: (datum: Datum) => string
+    getDatumColor: (datum: Datum) => string | undefined
+    getDatumLink?: (datum: Datum) => string | undefined
+    getCategory?: (datum: Datum) => string | undefined
+}
+
+export interface SeriesChartContent<Datum> {
+    series: Series<Datum>[]
+}
+
+export interface InsightCategoricalContent<Datum> {
+    type: InsightContentType.Categorical
+    content: CategoricalChartContent<Datum>
+}
+
+export interface InsightSeriesContent<Datum> {
+    type: InsightContentType.Series
+    content: SeriesChartContent<Datum>
+}
+
+export type InsightContent<Datum> = InsightSeriesContent<Datum> | InsightCategoricalContent<Datum>
 
 export interface DashboardCreateInput {
     name: string
@@ -43,23 +72,16 @@ export interface FindInsightByNameInput {
     name: string
 }
 
-export type MinimalSearchRuntimeBasedInsightData = Omit<
-    SearchRuntimeBasedInsight,
-    'id' | 'dashboardReferenceCount' | 'isFrozen'
->
-export type MinimalSearchBackendBasedInsightData = Omit<
-    SearchBackendBasedInsight,
-    'id' | 'dashboardReferenceCount' | 'isFrozen'
->
-export type MinimalSearchBasedInsightData = MinimalSearchRuntimeBasedInsightData | MinimalSearchBackendBasedInsightData
-
+export type MinimalSearchBasedInsightData = Omit<SearchBasedInsight, 'id' | 'dashboardReferenceCount' | 'isFrozen'>
 export type MinimalCaptureGroupInsightData = Omit<CaptureGroupInsight, 'id' | 'dashboardReferenceCount' | 'isFrozen'>
 export type MinimalLangStatsInsightData = Omit<LangStatsInsight, 'id' | 'dashboardReferenceCount' | 'isFrozen'>
+export type MinimalComputeInsightData = Omit<ComputeInsight, 'id' | 'dashboardReferenceCount' | 'isFrozen'>
 
 export type CreationInsightInput =
     | MinimalSearchBasedInsightData
     | MinimalCaptureGroupInsightData
     | MinimalLangStatsInsightData
+    | MinimalComputeInsightData
 
 export interface InsightCreateInput {
     insight: CreationInsightInput
@@ -76,36 +98,35 @@ export interface RemoveInsightFromDashboardInput {
     dashboardId: string
 }
 
-export interface SearchInsightSettings {
-    series: SearchBasedInsightSeries[]
-    step: Duration
-    repositories: string[]
-}
-
-export interface LangStatsInsightsSettings {
-    repository: string
-    otherThreshold: number
-}
-
 export interface CaptureInsightSettings {
     repositories: string[]
     query: string
     step: Duration
 }
 
-export interface AccessibleInsightInfo {
-    id: string
-    title: string
+export interface InsightPreviewSettings {
+    repositories: string[]
+    step: Duration
+    series: SeriesPreviewSettings[]
+}
+
+export interface SeriesPreviewSettings {
+    query: string
+    generatedFromCaptureGroup?: boolean
+    label: string
+    stroke: string
+    groupBy?: GroupByField
+}
+
+export interface BackendInsightDatum {
+    dateTime: Date
+    value: number
+    link?: string
 }
 
 export interface BackendInsightData {
-    id: string
-    view: {
-        title: string
-        subtitle?: string
-        content: LineChartContent<any, string>[]
-        isFetchingHistoricalData: boolean
-    }
+    data: InsightContent<any>
+    isFetchingHistoricalData: boolean
 }
 
 export interface GetBuiltInsightInput {
@@ -113,14 +134,27 @@ export interface GetBuiltInsightInput {
 }
 
 export interface GetSearchInsightContentInput {
-    insight: SearchInsightSettings
+    series: SearchBasedInsightSeries[]
+    step: Duration
+    repositories: string[]
 }
 
 export interface GetLangStatsInsightContentInput {
-    insight: LangStatsInsightsSettings
+    repository: string
+    otherThreshold: number
 }
 
 export interface RepositorySuggestionData {
     id: string
     name: string
+}
+
+export interface UiFeaturesConfig {
+    licensed: boolean
+    insightsLimit: number | null
+}
+
+export interface HasInsightsInput {
+    first: number
+    isFrozen?: boolean
 }

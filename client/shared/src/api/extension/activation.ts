@@ -1,10 +1,10 @@
 import { Remote } from 'comlink'
 import { BehaviorSubject, combineLatest, from, Observable, Subscription } from 'rxjs'
-import { catchError, concatMap, distinctUntilChanged, map, tap } from 'rxjs/operators'
+import { catchError, concatMap, distinctUntilChanged, first, map, switchMap, tap } from 'rxjs/operators'
 import sourcegraph from 'sourcegraph'
 
 import { Contributions } from '@sourcegraph/client-api'
-import { asError, ErrorLike, isErrorLike, hashCode, memoizeObservable } from '@sourcegraph/common'
+import { asError, ErrorLike, isErrorLike, hashCode, memoizeObservable, logger } from '@sourcegraph/common'
 
 import { ConfiguredExtension, getScriptURLFromExtensionManifest, splitExtensionID } from '../../extensions/extension'
 import { areExtensionsSame, getEnabledExtensionsForSubject } from '../../extensions/extensions'
@@ -16,13 +16,18 @@ import { parseContributionExpressions } from './api/contribution'
 import { ExtensionHostState } from './extensionHostState'
 
 export function observeActiveExtensions(
-    mainAPI: Remote<MainThreadAPI>
+    mainAPI: Remote<MainThreadAPI>,
+    mainThreadAPIInitializations: Observable<boolean>
 ): {
     activeLanguages: ExtensionHostState['activeLanguages']
     activeExtensions: ExtensionHostState['activeExtensions']
 } {
     const activeLanguages = new BehaviorSubject<ReadonlySet<string>>(new Set())
-    const enabledExtensions = wrapRemoteObservable(mainAPI.getEnabledExtensions())
+    // Wait until the main thread API has initialized since this runs during extension host init.
+    const enabledExtensions = mainThreadAPIInitializations.pipe(
+        first(initialized => initialized),
+        switchMap(() => wrapRemoteObservable(mainAPI.getEnabledExtensions()))
+    )
     const activatedExtensionIDs = new Set<string>()
 
     const activeExtensions: Observable<(ConfiguredExtension | ExecutableExtension)[]> = combineLatest([
@@ -59,6 +64,7 @@ export function activateExtensions(
     state: Pick<ExtensionHostState, 'activeExtensions' | 'contributions' | 'haveInitialExtensionsLoaded' | 'settings'>,
     mainAPI: Remote<Pick<MainThreadAPI, 'getScriptURLForExtension' | 'logEvent'>>,
     createExtensionAPI: (extensionID: string) => typeof sourcegraph,
+    mainThreadAPIInitializations: Observable<boolean>,
     /**
      * Function that activates an extension.
      * Returns a promise that resolves once the extension is activated.
@@ -72,14 +78,19 @@ export function activateExtensions(
 ): Subscription {
     const getScriptURLs = memoizeObservable(
         () =>
-            from(mainAPI.getScriptURLForExtension()).pipe(
-                map(getScriptURL => {
-                    function getBundleURLs(urls: string[]): Promise<(string | ErrorLike)[]> {
-                        return getScriptURL ? getScriptURL(urls) : Promise.resolve(urls)
-                    }
+            mainThreadAPIInitializations.pipe(
+                first(initialized => initialized),
+                switchMap(() =>
+                    from(mainAPI.getScriptURLForExtension()).pipe(
+                        map(getScriptURL => {
+                            function getBundleURLs(urls: string[]): Promise<(string | ErrorLike)[]> {
+                                return getScriptURL ? getScriptURL(urls) : Promise.resolve(urls)
+                            }
 
-                    return getBundleURLs
-                })
+                            return getBundleURLs
+                        })
+                    )
+                )
             ),
         () => 'getScriptURL'
     )
@@ -166,28 +177,35 @@ export function activateExtensions(
                         return from(
                             Promise.all([
                                 toActivate.map(async ({ id, scriptURL }) => {
-                                    console.log(`Activating Sourcegraph extension: ${id}`)
-
                                     // We only want to log non-default extension events
                                     if (!defaultExtensions[id]) {
                                         // Hash extension IDs that specify host, since that means that it's a private registry extension.
-                                        const telemetryExtensionID = splitExtensionID(id).host ? await hashCode(id) : id
-                                        mainAPI
-                                            .logEvent('ExtensionActivation', {
-                                                extension_id: telemetryExtensionID,
-                                            })
-                                            .catch(() => {
-                                                // noop
-                                            })
+                                        try {
+                                            const telemetryExtensionID = splitExtensionID(id).host
+                                                ? await hashCode(id)
+                                                : id
+                                            mainAPI
+                                                .logEvent('ExtensionActivation', {
+                                                    extension_id: telemetryExtensionID,
+                                                })
+                                                .catch(() => {
+                                                    // noop
+                                                })
+                                        } catch (error) {
+                                            logger.error(
+                                                `Fail to log ExtensionActivation event for extension ${id}:`,
+                                                asError(error)
+                                            )
+                                        }
                                     }
-
+                                    logger.log(`Activating Sourcegraph extension: ${id}`)
                                     return activate(id, scriptURL, createExtensionAPI).catch(error =>
-                                        console.error(`Error activating extension ${id}:`, asError(error))
+                                        logger.error(`Error activating extension ${id}:`, asError(error))
                                     )
                                 }),
                                 [...toDeactivate].map(id =>
                                     deactivate(id).catch(error =>
-                                        console.error(`Error deactivating extension ${id}:`, asError(error))
+                                        logger.error(`Error deactivating extension ${id}:`, asError(error))
                                     )
                                 ),
                             ])
@@ -195,7 +213,7 @@ export function activateExtensions(
                     }),
                     map(() => ({ activated: toActivate, deactivated: toDeactivate })),
                     catchError(error => {
-                        console.error('Uncaught error during extension activation', error)
+                        logger.error('Uncaught error during extension activation', error)
                         return []
                     })
                 )
@@ -325,29 +343,29 @@ export function extensionsWithMatchedActivationEvent<Extension extends Configure
             if (!extension.manifest) {
                 const match = /^sourcegraph\/lang-(.*)$/.exec(extension.id)
                 if (match) {
-                    console.warn(
+                    logger.warn(
                         `Extension ${extension.id} has been renamed to sourcegraph/${match[1]}. It's safe to remove ${extension.id} from your settings.`
                     )
                 } else {
-                    console.warn(
+                    logger.warn(
                         `Extension ${extension.id} was not found. Remove it from settings to suppress this warning.`
                     )
                 }
                 return false
             }
             if (isErrorLike(extension.manifest)) {
-                console.warn(extension.manifest)
+                logger.warn(extension.manifest)
                 return false
             }
             if (!extension.manifest.activationEvents) {
-                console.warn(`Extension ${extension.id} has no activation events, so it will never be activated.`)
+                logger.warn(`Extension ${extension.id} has no activation events, so it will never be activated.`)
                 return false
             }
             return extension.manifest.activationEvents.some(
                 event => event === '*' || languageActivationEvents.has(event)
             )
         } catch (error) {
-            console.error(error)
+            logger.error(error)
         }
         return false
     })

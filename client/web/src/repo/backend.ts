@@ -2,31 +2,23 @@ import { Observable } from 'rxjs'
 import { map } from 'rxjs/operators'
 
 import { createAggregateError, memoizeObservable } from '@sourcegraph/common'
-import { dataOrThrowErrors, gql } from '@sourcegraph/http-client'
+import { gql } from '@sourcegraph/http-client'
 import {
     CloneInProgressError,
     RepoNotFoundError,
     RepoSeeOtherError,
     RevisionNotFoundError,
 } from '@sourcegraph/shared/src/backend/errors'
-import { FetchFileParameters } from '@sourcegraph/shared/src/components/CodeExcerpt'
 import {
-    AbsoluteRepoFile,
     makeRepoURI,
     RepoRevision,
-    RevisionSpec,
     RepoSpec,
     ResolvedRevisionSpec,
+    RevisionSpec,
 } from '@sourcegraph/shared/src/util/url'
 
-import { queryGraphQL, requestGraphQL } from '../backend/graphql'
-import {
-    TreeFields,
-    ExternalLinkFields,
-    RepositoryRedirectResult,
-    RepositoryRedirectVariables,
-    RepositoryFields,
-} from '../graphql-operations'
+import { queryGraphQL } from '../backend/graphql'
+import { ExternalLinkFields, RepositoryFields } from '../graphql-operations'
 
 export const externalLinkFieldsFragment = gql`
     fragment ExternalLinkFields on ExternalLink {
@@ -44,6 +36,9 @@ export const repositoryFragment = gql`
             url
             serviceKind
         }
+        externalRepository {
+            serviceType
+        }
         description
         viewerCanAdminister
         defaultBranch {
@@ -53,42 +48,6 @@ export const repositoryFragment = gql`
     }
 `
 
-/**
- * Fetch the repository.
- */
-export const fetchRepository = memoizeObservable(
-    (args: { repoName: string }): Observable<RepositoryFields> =>
-        requestGraphQL<RepositoryRedirectResult, RepositoryRedirectVariables>(
-            gql`
-                query RepositoryRedirect($repoName: String!) {
-                    repositoryRedirect(name: $repoName) {
-                        __typename
-                        ... on Repository {
-                            ...RepositoryFields
-                        }
-                        ... on Redirect {
-                            url
-                        }
-                    }
-                }
-                ${repositoryFragment}
-            `,
-            args
-        ).pipe(
-            map(dataOrThrowErrors),
-            map(data => {
-                if (!data.repositoryRedirect) {
-                    throw new RepoNotFoundError(args.repoName)
-                }
-                if (data.repositoryRedirect.__typename === 'Redirect') {
-                    throw new RepoSeeOtherError(data.repositoryRedirect.url)
-                }
-                return data.repositoryRedirect
-            })
-        ),
-    makeRepoURI
-)
-
 export interface ResolvedRevision extends ResolvedRevisionSpec {
     defaultBranch: string
 
@@ -96,19 +55,24 @@ export interface ResolvedRevision extends ResolvedRevisionSpec {
     rootTreeURL: string
 }
 
+export interface Repo {
+    repo: RepositoryFields
+}
+
 /**
  * When `revision` is undefined, the default branch is resolved.
  *
  * @returns Observable that emits the commit ID. Errors with a `CloneInProgressError` if the repo is still being cloned.
  */
-export const resolveRevision = memoizeObservable(
-    ({ repoName, revision }: RepoSpec & Partial<RevisionSpec>): Observable<ResolvedRevision> =>
+export const resolveRepoRevision = memoizeObservable(
+    ({ repoName, revision }: RepoSpec & Partial<RevisionSpec>): Observable<ResolvedRevision & Repo> =>
         queryGraphQL(
             gql`
-                query ResolveRev($repoName: String!, $revision: String!) {
+                query ResolveRepoRev($repoName: String!, $revision: String!) {
                     repositoryRedirect(name: $repoName) {
                         __typename
                         ... on Repository {
+                            ...RepositoryFields
                             mirrorInfo {
                                 cloneInProgress
                                 cloneProgress
@@ -129,6 +93,7 @@ export const resolveRevision = memoizeObservable(
                         }
                     }
                 }
+                ${repositoryFragment}
             `,
             { repoName, revision: revision || '' }
         ).pipe(
@@ -160,7 +125,9 @@ export const resolveRevision = memoizeObservable(
                 if (!data.repositoryRedirect.commit.tree) {
                     throw new RevisionNotFoundError(defaultBranch)
                 }
+
                 return {
+                    repo: data.repositoryRedirect,
                     commitID: data.repositoryRedirect.commit.oid,
                     defaultBranch,
                     rootTreeURL: data.repositoryRedirect.commit.tree.url,
@@ -168,54 +135,6 @@ export const resolveRevision = memoizeObservable(
             })
         ),
     makeRepoURI
-)
-
-/**
- * Fetches the specified highlighted file line ranges (`FetchFileParameters.ranges`) and returns
- * them as a list of ranges, each describing a list of lines in the form of HTML table '<tr>...</tr>'.
- */
-export const fetchHighlightedFileLineRanges = memoizeObservable(
-    (context: FetchFileParameters, force?: boolean): Observable<string[][]> =>
-        queryGraphQL(
-            gql`
-                query HighlightedFile(
-                    $repoName: String!
-                    $commitID: String!
-                    $filePath: String!
-                    $disableTimeout: Boolean!
-                    $ranges: [HighlightLineRange!]!
-                ) {
-                    repository(name: $repoName) {
-                        commit(rev: $commitID) {
-                            file(path: $filePath) {
-                                isDirectory
-                                highlight(disableTimeout: $disableTimeout) {
-                                    aborted
-                                    lineRanges(ranges: $ranges)
-                                }
-                            }
-                        }
-                    }
-                }
-            `,
-            context
-        ).pipe(
-            map(({ data, errors }) => {
-                if (!data?.repository?.commit?.file?.highlight) {
-                    throw createAggregateError(errors)
-                }
-                const file = data.repository.commit.file
-                if (file.isDirectory) {
-                    return []
-                }
-                return file.highlight.lineRanges
-            })
-        ),
-    context =>
-        makeRepoURI(context) +
-        `?disableTimeout=${String(context.disableTimeout)}&ranges=${context.ranges
-            .map(range => `${range.startLine}:${range.endLine}`)
-            .join(',')}`
 )
 
 export const fetchFileExternalLinks = memoizeObservable(
@@ -246,54 +165,4 @@ export const fetchFileExternalLinks = memoizeObservable(
             })
         ),
     makeRepoURI
-)
-
-export const fetchTreeEntries = memoizeObservable(
-    (args: AbsoluteRepoFile & { first?: number }): Observable<TreeFields> =>
-        queryGraphQL(
-            gql`
-                query TreeEntries(
-                    $repoName: String!
-                    $revision: String!
-                    $commitID: String!
-                    $filePath: String!
-                    $first: Int
-                ) {
-                    repository(name: $repoName) {
-                        commit(rev: $commitID, inputRevspec: $revision) {
-                            tree(path: $filePath) {
-                                ...TreeFields
-                            }
-                        }
-                    }
-                }
-                fragment TreeFields on GitTree {
-                    isRoot
-                    url
-                    entries(first: $first, recursiveSingleChild: true) {
-                        ...TreeEntryFields
-                    }
-                }
-                fragment TreeEntryFields on TreeEntry {
-                    name
-                    path
-                    isDirectory
-                    url
-                    submodule {
-                        url
-                        commit
-                    }
-                    isSingleChild
-                }
-            `,
-            args
-        ).pipe(
-            map(({ data, errors }) => {
-                if (errors || !data?.repository?.commit?.tree) {
-                    throw createAggregateError(errors)
-                }
-                return data.repository.commit.tree
-            })
-        ),
-    ({ first, ...args }) => `${makeRepoURI(args)}:first-${String(first)}`
 )

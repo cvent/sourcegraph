@@ -1,6 +1,6 @@
 import { SourcegraphContext } from '../../src/jscontext'
 
-import { environmentConfig } from './environment-config'
+import { ENVIRONMENT_CONFIG } from './environment-config'
 import { getSiteConfig } from './get-site-config'
 
 // TODO: share with `client/web/src/integration/jscontext` which is not included into `tsconfig.json` now.
@@ -21,7 +21,7 @@ export const createJsContext = ({ sourcegraphBaseUrl }: { sourcegraphBaseUrl: st
         siteConfig.authProviders.unshift(builtinAuthProvider)
     }
 
-    return {
+    return <SourcegraphContext>{
         externalURL: sourcegraphBaseUrl,
         accessTokensAllow: 'all-users-create',
         allowSignup: true,
@@ -31,7 +31,6 @@ export const createJsContext = ({ sourcegraphBaseUrl }: { sourcegraphBaseUrl: st
         executorsEnabled: false,
         codeIntelAutoIndexingEnabled: false,
         codeIntelAutoIndexingAllowGlobalPolicies: false,
-        codeInsightsGqlApiEnabled: true,
         externalServicesUserMode: 'public',
         productResearchPageEnabled: true,
         assetsRoot: '/.assets',
@@ -50,13 +49,22 @@ export const createJsContext = ({ sourcegraphBaseUrl }: { sourcegraphBaseUrl: st
         },
         siteID: 'TestSiteID',
         siteGQLID: 'TestGQLSiteID',
-        sourcegraphDotComMode: environmentConfig.SOURCEGRAPHDOTCOM_MODE,
-        githubAppCloudSlug: 'TestApp',
-        githubAppCloudClientID: 'TestClientID',
+        sourcegraphDotComMode: ENVIRONMENT_CONFIG.SOURCEGRAPHDOTCOM_MODE,
         userAgentIsBot: false,
         version: '0.0.0',
         xhrHeaders: {},
         authProviders: [builtinAuthProvider],
+        authMinPasswordLength: 12,
+        authPasswordPolicy: {
+            enabled: false,
+            numberOfSpecialCharacters: 2,
+            requireAtLeastOneNumber: true,
+            requireUpperandLowerCase: true,
+        },
+        openTelemetry: {
+            endpoint: ENVIRONMENT_CONFIG.CLIENT_OTEL_EXPORTER_OTLP_ENDPOINT,
+        },
+        enableLegacyExtensions: false,
         // Site-config overrides default JS context
         ...siteConfig,
     }

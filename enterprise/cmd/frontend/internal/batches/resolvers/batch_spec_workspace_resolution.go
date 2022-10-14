@@ -9,6 +9,7 @@ import (
 	"github.com/sourcegraph/sourcegraph/enterprise/internal/batches/search"
 	"github.com/sourcegraph/sourcegraph/enterprise/internal/batches/store"
 	btypes "github.com/sourcegraph/sourcegraph/enterprise/internal/batches/types"
+	"github.com/sourcegraph/sourcegraph/internal/gqlutil"
 	"github.com/sourcegraph/sourcegraph/lib/errors"
 )
 
@@ -23,18 +24,18 @@ func (r *batchSpecWorkspaceResolutionResolver) State() string {
 	return r.resolution.State.ToGraphQL()
 }
 
-func (r *batchSpecWorkspaceResolutionResolver) StartedAt() *graphqlbackend.DateTime {
+func (r *batchSpecWorkspaceResolutionResolver) StartedAt() *gqlutil.DateTime {
 	if r.resolution.StartedAt.IsZero() {
 		return nil
 	}
-	return &graphqlbackend.DateTime{Time: r.resolution.StartedAt}
+	return &gqlutil.DateTime{Time: r.resolution.StartedAt}
 }
 
-func (r *batchSpecWorkspaceResolutionResolver) FinishedAt() *graphqlbackend.DateTime {
+func (r *batchSpecWorkspaceResolutionResolver) FinishedAt() *gqlutil.DateTime {
 	if r.resolution.FinishedAt.IsZero() {
 		return nil
 	}
-	return &graphqlbackend.DateTime{Time: r.resolution.FinishedAt}
+	return &gqlutil.DateTime{Time: r.resolution.FinishedAt}
 }
 
 func (r *batchSpecWorkspaceResolutionResolver) FailureMessage() *string {
@@ -49,11 +50,6 @@ func (r *batchSpecWorkspaceResolutionResolver) Workspaces(ctx context.Context, a
 	opts.BatchSpecID = r.resolution.BatchSpecID
 
 	return &batchSpecWorkspaceConnectionResolver{store: r.store, opts: opts}, nil
-}
-
-func (r *batchSpecWorkspaceResolutionResolver) Unsupported(ctx context.Context) graphqlbackend.RepositoryConnectionResolver {
-	// TODO(ssbc): not implemented
-	return nil
 }
 
 func (r *batchSpecWorkspaceResolutionResolver) RecentlyCompleted(ctx context.Context, args *graphqlbackend.ListRecentlyCompletedWorkspacesArgs) graphqlbackend.BatchSpecWorkspaceConnectionResolver {
@@ -91,7 +87,14 @@ func workspacesListArgsToDBOpts(args *graphqlbackend.ListWorkspacesArgs) (opts s
 		if *args.State == "COMPLETED" {
 			opts.OnlyCachedOrCompleted = true
 		} else if *args.State == "PENDING" {
-			opts.OnlyWithoutExecution = true
+			opts.OnlyWithoutExecutionAndNotCached = true
+		} else if *args.State == "CANCELING" {
+			t := true
+			opts.Cancel = &t
+			opts.State = btypes.BatchSpecWorkspaceExecutionJobStateProcessing
+		} else if *args.State == "SKIPPED" {
+			t := true
+			opts.Skipped = &t
 		} else {
 			// Convert the GQL type into the DB type: we just need to lowercase it. Magic 🪄.
 			opts.State = btypes.BatchSpecWorkspaceExecutionJobState(strings.ToLower(*args.State))

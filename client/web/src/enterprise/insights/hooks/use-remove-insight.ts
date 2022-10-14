@@ -1,10 +1,9 @@
 import { useCallback, useContext, useState } from 'react'
 
-import { ErrorLike } from '@sourcegraph/common'
+import { ErrorLike, logger } from '@sourcegraph/common'
 
 import { eventLogger } from '../../../tracking/eventLogger'
-import { CodeInsightsBackendContext } from '../core/backend/code-insights-backend-context'
-import { Insight, InsightDashboard } from '../core/types'
+import { CodeInsightsBackendContext, Insight, InsightDashboard } from '../core'
 import { getTrackingTypeByInsightType } from '../pings'
 
 interface RemoveInsightInput {
@@ -27,12 +26,9 @@ export function useRemoveInsightFromDashboard(): useRemoveInsightFromDashboardAP
     const handleRemove = useCallback(
         async (input: RemoveInsightInput) => {
             const { insight, dashboard } = input
-            const shouldRemove = window.confirm(
-                `Are you sure you want to remove the insight "${insight.title}" from the dashboard "${dashboard.title}"?`
-            )
 
             // Prevent double call if we already have ongoing request
-            if (loading || !shouldRemove) {
+            if (loading) {
                 return
             }
 
@@ -50,7 +46,7 @@ export function useRemoveInsightFromDashboard(): useRemoveInsightFromDashboardAP
                 eventLogger.log('InsightRemovalFromDashboard', { insightType }, { insightType })
             } catch (error) {
                 // TODO [VK] Improve error UI for removing
-                console.error(error)
+                logger.error(error)
                 setError(error)
             }
         },

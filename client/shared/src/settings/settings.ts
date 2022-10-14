@@ -19,15 +19,25 @@ export interface IClient {
  */
 export interface Settings {
     extensions?: { [extensionID: string]: boolean }
+    'codeIntel.referencesPanel'?: 'tree-view' | 'tabbed'
     experimentalFeatures?: {
-        enableFastResultLoading?: boolean
         batchChangesExecution?: boolean
         showSearchContext?: boolean
         showSearchContextManagement?: boolean
         fuzzyFinder?: boolean
+        fuzzyFinderAll?: boolean
         fuzzyFinderCaseInsensitiveFileCountThreshold?: number
+        fuzzyFinderActions?: boolean
         clientSearchResultRanking?: string
         coolCodeIntel?: boolean
+        codeIntelRepositoryBadge?: {
+            enabled: boolean
+            forNerds?: boolean
+        }
+        enableGoImportsSearchQueryTransform?: boolean
+        enableLegacyExtensions?: boolean
+        enableLazyFileResultSyntaxHighlighting?: boolean
+        enableMergedFileSymbolSidebar?: boolean
     }
     [key: string]: any
 

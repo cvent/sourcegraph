@@ -51,8 +51,8 @@ while getopts 'b:r:d' flag; do
 done
 
 # Get `{owner}/{repo}` part from GitHub repository url
-if [[ "$repo_url" =~ ^(https|git):\/\/github\.com\/(.*)$ ]]; then
-  owner_and_repo="${BASH_REMATCH[2]//\.git/}"
+if [[ "$repo_url" =~ ^(https://|git://|git@)github\.com(:|\/)(.*)$ ]]; then
+  owner_and_repo="${BASH_REMATCH[3]//\.git/}"
 else
   echo "Couldn't find owner_and_repo"
   exit 1
@@ -73,7 +73,7 @@ fi
 pr_preview_app_name="sg-web-${branch_name}"
 
 # Get service id of preview app on render.com with app name (if exists)
-renderServiceId=$(curl -sS --request GET \
+renderServiceId=$(curl -sSf --request GET \
   --url "https://api.render.com/v1/services?limit=1&type=web_service&name=$(urlencode "$pr_preview_app_name")" \
   --header 'Accept: application/json' \
   --header "Authorization: Bearer ${render_api_key}" | jq -r '.[].service.id')
@@ -168,7 +168,7 @@ fi
 
 echo "Preview url: ${pr_preview_url}"
 
-if [[ -n "${github_api_key}" && -n "${pr_number}" ]]; then
+if [[ -n "${github_api_key}" && -n "${pr_number}" && "${pr_number}" != "false" ]]; then
 
   # GitHub pull request number and GitHub api token are set
   # Appending `App Preview` section into PR description if it hasn't existed yet
@@ -183,7 +183,11 @@ if [[ -n "${github_api_key}" && -n "${pr_number}" ]]; then
   if [[ "${pr_description}" != *"## App preview"* ]]; then
     echo "Updating PR #${pr_number} in ${owner_and_repo} description"
 
-    pr_description=$(echo -e "${pr_description}\n## App preview:\n- [Link](${pr_preview_url})\n" | jq -Rs .)
+    pr_description=$(printf '%s\n\n' "${pr_description}" \
+      "## App preview:" \
+      "- [Web](${pr_preview_url})" \
+      "Check out the [client app preview documentation](https://docs.sourcegraph.com/dev/how-to/client_pr_previews) to learn more." |
+      jq -Rs .)
 
     curl -sSf -o /dev/null --request PATCH \
       --url "${github_pr_api_url}" \

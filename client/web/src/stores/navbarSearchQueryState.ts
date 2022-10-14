@@ -5,21 +5,28 @@
 // (see https://github.com/sourcegraph/sourcegraph/issues/21200).
 import create from 'zustand'
 
-import { BuildSearchQueryURLParameters, canSubmitSearch, SearchQueryState, updateQuery } from '@sourcegraph/search'
-import { SearchPatternType } from '@sourcegraph/shared/src/schema'
+import {
+    BuildSearchQueryURLParameters,
+    canSubmitSearch,
+    SearchQueryState,
+    updateQuery,
+    InitialParametersSource,
+    SearchPatternType,
+} from '@sourcegraph/search'
 import { Settings, SettingsCascadeOrError } from '@sourcegraph/shared/src/settings/settings'
 import { buildSearchURLQuery } from '@sourcegraph/shared/src/util/url'
 
-import { parseSearchURL } from '../search'
+import { ParsedSearchURL } from '../search'
 import { submitSearch } from '../search/helpers'
 import { defaultCaseSensitiveFromSettings, defaultPatternTypeFromSettings } from '../util/settings'
 
 export interface NavbarQueryState extends SearchQueryState {}
 
 export const useNavbarQueryState = create<NavbarQueryState>((set, get) => ({
+    parametersSource: InitialParametersSource.DEFAULT,
     queryState: { query: '' },
     searchCaseSensitivity: false,
-    searchPatternType: SearchPatternType.literal,
+    searchPatternType: SearchPatternType.standard,
     searchQueryFromURL: '',
 
     setQueryState: queryStateUpdate => {
@@ -52,25 +59,35 @@ export function setSearchCaseSensitivity(searchCaseSensitivity: boolean): void {
 }
 
 /**
- * Update or initialize query state related data from URL search parameters
+ * Update or initialize query state related data from URL search parameters.
+ *
+ * @param parsedSearchURL contains the information extracted from a URL
+ * @param query can be used to specify the query to use when it differs from
+ * the one contained in the URL (e.g. when the context:... filter got removed)
  */
-export function setQueryStateFromURL(urlParameters: string): void {
+export function setQueryStateFromURL(parsedSearchURL: ParsedSearchURL, query = parsedSearchURL.query ?? ''): void {
+    if (useNavbarQueryState.getState().parametersSource > InitialParametersSource.URL) {
+        return
+    }
+
     // This will be updated with the default in settings when the web app mounts.
     const newState: Partial<
-        Pick<NavbarQueryState, 'searchPatternType' | 'searchCaseSensitivity' | 'searchQueryFromURL'>
+        Pick<
+            NavbarQueryState,
+            'queryState' | 'searchPatternType' | 'searchCaseSensitivity' | 'searchQueryFromURL' | 'parametersSource'
+        >
     > = {}
-
-    const parsedSearchURL = parseSearchURL(urlParameters)
 
     if (parsedSearchURL.query) {
         // Only update flags if the URL contains a search query.
+        newState.parametersSource = InitialParametersSource.URL
         newState.searchCaseSensitivity = parsedSearchURL.caseSensitive
         if (parsedSearchURL.patternType !== undefined) {
             newState.searchPatternType = parsedSearchURL.patternType
         }
+        newState.queryState = { query }
+        newState.searchQueryFromURL = parsedSearchURL.query
     }
-
-    newState.searchQueryFromURL = parsedSearchURL.query ?? ''
 
     // The way Zustand is designed makes it difficult to build up a partial new
     // state object, hence the cast to any here.
@@ -81,10 +98,18 @@ export function setQueryStateFromURL(urlParameters: string): void {
  * Update or initialize query state related data from settings
  */
 export function setQueryStateFromSettings(settings: SettingsCascadeOrError<Settings>): void {
-    const newState: Partial<Pick<NavbarQueryState, 'searchPatternType' | 'searchCaseSensitivity'>> = {}
+    if (useNavbarQueryState.getState().parametersSource > InitialParametersSource.USER_SETTINGS) {
+        return
+    }
+
+    const newState: Partial<
+        Pick<NavbarQueryState, 'searchPatternType' | 'searchCaseSensitivity' | 'parametersSource'>
+    > = {
+        parametersSource: InitialParametersSource.USER_SETTINGS,
+    }
 
     const caseSensitive = defaultCaseSensitiveFromSettings(settings)
-    if (caseSensitive) {
+    if (caseSensitive !== undefined) {
         newState.searchCaseSensitivity = caseSensitive
     }
 

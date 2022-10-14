@@ -34,7 +34,7 @@ import { EventLogger } from '../../shared/tracking/eventLogger'
 import { getExtensionVersion, getPlatformName, observeSourcegraphURL } from '../../shared/util/context'
 import { BrowserActionIconState, setBrowserActionIconState } from '../browser-action-icon'
 import { assertEnvironment } from '../environmentAssertion'
-import { checkUrlPermissions } from '../util'
+import { checkUrlPermissions, IsProductionVersion } from '../util'
 import { fromBrowserEvent } from '../web-extension-api/fromBrowserEvent'
 import { observeStorageKey, storage } from '../web-extension-api/storage'
 import { BackgroundPageApi, BackgroundPageApiHandlers } from '../web-extension-api/types'
@@ -48,9 +48,6 @@ const INTERVAL_FOR_SOURCEGRPAH_URL_CHECK = 5 /* minutes */ * 60 * 1000
 assertEnvironment('BACKGROUND')
 
 initSentry('background')
-
-// Whether current extension is built in dev mode
-const IsProductionVersion = !getExtensionVersion().startsWith('0.0.0')
 
 /**
  * For each tab, we store a flag if we know that we are on:
@@ -69,7 +66,6 @@ const tabRepoSyncErrorCache = (() => {
          * private code on Cloud or not synced repo on other than Cloud Sourcegrpah instance error.
          */
         setTabHasRepoSyncError(tabId: number, hasRepoSyncError: boolean, sourcegraphURL?: string): void {
-            console.log('cache', [...cache.keys()])
             if (sourcegraphURL) {
                 let record = cache.get(tabId)
 
@@ -255,10 +251,6 @@ async function main(): Promise<void> {
         },
 
         fetchCache,
-
-        getCookie(details) {
-            return browser.cookies.get(details)
-        },
     }
 
     // Handle calls from other scripts

@@ -4,8 +4,10 @@ import classNames from 'classnames'
 
 import { ErrorAlert } from '@sourcegraph/branded/src/components/alerts'
 import { Form } from '@sourcegraph/branded/src/components/Form'
-import { Button, LoadingSpinner, Modal, Link } from '@sourcegraph/wildcard'
+import { logger } from '@sourcegraph/common'
+import { Button, Modal, Link, Code, Label, Text, Input } from '@sourcegraph/wildcard'
 
+import { LoaderButton } from '../../../components/LoaderButton'
 import { ExternalServiceKind, Scalars } from '../../../graphql-operations'
 
 import { useCreateBatchChangesCredential } from './backend'
@@ -21,6 +23,7 @@ export interface AddCredentialModalProps {
     externalServiceKind: ExternalServiceKind
     externalServiceURL: string
     requiresSSH: boolean
+    requiresUsername: boolean
 
     /** For testing only. */
     initialStep?: Step
@@ -28,37 +31,36 @@ export interface AddCredentialModalProps {
 
 const HELP_TEXT_LINK_URL = 'https://docs.sourcegraph.com/batch_changes/quickstart#configure-code-host-credentials'
 
-const helpTexts: Record<ExternalServiceKind, JSX.Element> = {
+const scopeRequirements: Record<ExternalServiceKind, JSX.Element> = {
     [ExternalServiceKind.GITHUB]: (
-        <>
-            <Link to={HELP_TEXT_LINK_URL} rel="noreferrer noopener" target="_blank">
-                Create a new access token
-            </Link>{' '}
-            with the <code>repo</code>, <code>read:org</code>, <code>user:email</code>, <code>read:discussion</code>,
-            and <code>workflow</code> scopes.
-        </>
+        <span>
+            with the <Code>repo</Code>, <Code>read:org</Code>, <Code>user:email</Code>, <Code>read:discussion</Code>,
+            and <Code>workflow</Code> scopes.
+        </span>
     ),
     [ExternalServiceKind.GITLAB]: (
-        <>
-            <Link to={HELP_TEXT_LINK_URL} rel="noreferrer noopener" target="_blank">
-                Create a new access token
-            </Link>{' '}
-            with <code>api</code>, <code>read_repository</code>, and <code>write_repository</code> scopes.
-        </>
+        <span>
+            with <Code>api</Code>, <Code>read_repository</Code>, and <Code>write_repository</Code> scopes.
+        </span>
     ),
     [ExternalServiceKind.BITBUCKETSERVER]: (
-        <>
-            <Link to={HELP_TEXT_LINK_URL} rel="noreferrer noopener" target="_blank">
-                Create a new access token
-            </Link>{' '}
-            with <code>write</code> permissions on the project and repository level.
-        </>
+        <span>
+            with <Code>write</Code> permissions on the project and repository level.
+        </span>
+    ),
+    [ExternalServiceKind.BITBUCKETCLOUD]: (
+        <span>
+            with <Code>account:read</Code>, <Code>repo:write</Code>, <Code>pr:write</Code>, and{' '}
+            <Code>pipeline:read</Code> permissions.
+        </span>
     ),
 
     // These are just for type completeness and serve as placeholders for a bright future.
-    [ExternalServiceKind.BITBUCKETCLOUD]: <span>Unsupported</span>,
+    [ExternalServiceKind.GERRIT]: <span>Unsupported</span>,
     [ExternalServiceKind.GITOLITE]: <span>Unsupported</span>,
     [ExternalServiceKind.GOMODULES]: <span>Unsupported</span>,
+    [ExternalServiceKind.PYTHONPACKAGES]: <span>Unsupported</span>,
+    [ExternalServiceKind.RUSTPACKAGES]: <span>Unsupported</span>,
     [ExternalServiceKind.JVMPACKAGES]: <span>Unsupported</span>,
     [ExternalServiceKind.NPMPACKAGES]: <span>Unsupported</span>,
     [ExternalServiceKind.PERFORCE]: <span>Unsupported</span>,
@@ -70,22 +72,28 @@ const helpTexts: Record<ExternalServiceKind, JSX.Element> = {
 
 type Step = 'add-token' | 'get-ssh-key'
 
-export const AddCredentialModal: React.FunctionComponent<AddCredentialModalProps> = ({
+export const AddCredentialModal: React.FunctionComponent<React.PropsWithChildren<AddCredentialModalProps>> = ({
     onCancel,
     afterCreate,
     userID,
     externalServiceKind,
     externalServiceURL,
     requiresSSH,
+    requiresUsername,
     initialStep = 'add-token',
 }) => {
     const labelId = 'addCredential'
     const [credential, setCredential] = useState<string>('')
     const [sshPublicKey, setSSHPublicKey] = useState<string>()
+    const [username, setUsername] = useState<string>('')
     const [step, setStep] = useState<Step>(initialStep)
 
     const onChangeCredential = useCallback<React.ChangeEventHandler<HTMLInputElement>>(event => {
         setCredential(event.target.value)
+    }, [])
+
+    const onChangeUsername = useCallback<React.ChangeEventHandler<HTMLInputElement>>(event => {
+        setUsername(event.target.value)
     }, [])
 
     const [createBatchChangesCredential, { loading, error }] = useCreateBatchChangesCredential()
@@ -99,6 +107,7 @@ export const AddCredentialModal: React.FunctionComponent<AddCredentialModalProps
                     variables: {
                         user: userID,
                         credential,
+                        username: requiresUsername ? username : null,
                         externalServiceKind,
                         externalServiceURL,
                     },
@@ -111,19 +120,24 @@ export const AddCredentialModal: React.FunctionComponent<AddCredentialModalProps
                     afterCreate()
                 }
             } catch (error) {
-                console.error(error)
+                logger.error(error)
             }
         },
         [
-            afterCreate,
+            createBatchChangesCredential,
             userID,
             credential,
+            requiresUsername,
+            username,
             externalServiceKind,
             externalServiceURL,
             requiresSSH,
-            createBatchChangesCredential,
+            afterCreate,
         ]
     )
+
+    const patLabel =
+        externalServiceKind === ExternalServiceKind.BITBUCKETCLOUD ? 'App password' : 'Personal access token'
 
     return (
         <Modal onDismiss={onCancel} aria-labelledby={labelId}>
@@ -136,9 +150,9 @@ export const AddCredentialModal: React.FunctionComponent<AddCredentialModalProps
                 {requiresSSH && (
                     <div className="d-flex w-100 justify-content-between mb-4">
                         <div className="flex-grow-1 mr-2">
-                            <p className={classNames('mb-0 py-2', step === 'get-ssh-key' && 'text-muted')}>
+                            <Text className={classNames('mb-0 py-2', step === 'get-ssh-key' && 'text-muted')}>
                                 1. Add token
-                            </p>
+                            </Text>
                             <div
                                 className={classNames(
                                     styles.addCredentialModalModalStepRuler,
@@ -147,9 +161,9 @@ export const AddCredentialModal: React.FunctionComponent<AddCredentialModalProps
                             />
                         </div>
                         <div className="flex-grow-1 ml-2">
-                            <p className={classNames('mb-0 py-2', step === 'add-token' && 'text-muted')}>
+                            <Text className={classNames('mb-0 py-2', step === 'add-token' && 'text-muted')}>
                                 2. Get SSH Key
-                            </p>
+                            </Text>
                             <div
                                 className={classNames(
                                     styles.addCredentialModalModalStepRuler,
@@ -165,20 +179,47 @@ export const AddCredentialModal: React.FunctionComponent<AddCredentialModalProps
                         {error && <ErrorAlert error={error} />}
                         <Form onSubmit={onSubmit}>
                             <div className="form-group">
-                                <label htmlFor="token">Personal access token</label>
-                                <input
+                                {requiresUsername && (
+                                    <>
+                                        <Input
+                                            id="username"
+                                            name="username"
+                                            autoComplete="off"
+                                            inputClassName="mb-2"
+                                            className="mb-0"
+                                            required={true}
+                                            spellCheck="false"
+                                            minLength={1}
+                                            value={username}
+                                            onChange={onChangeUsername}
+                                            label="Username"
+                                        />
+                                    </>
+                                )}
+                                <Label htmlFor="token">{patLabel}</Label>
+                                <Input
                                     id="token"
                                     name="token"
                                     type="password"
                                     autoComplete="off"
-                                    className="form-control test-add-credential-modal-input"
+                                    data-testid="test-add-credential-modal-input"
                                     required={true}
                                     spellCheck="false"
                                     minLength={1}
                                     value={credential}
                                     onChange={onChangeCredential}
                                 />
-                                <p className="form-text">{helpTexts[externalServiceKind]}</p>
+                                <Text className="form-text">
+                                    <Link
+                                        to={HELP_TEXT_LINK_URL}
+                                        rel="noreferrer noopener"
+                                        target="_blank"
+                                        aria-label={`Follow our docs to learn how to create a new ${patLabel.toLocaleLowerCase()} on this code host`}
+                                    >
+                                        Create a new {patLabel.toLocaleLowerCase()}
+                                    </Link>{' '}
+                                    {scopeRequirements[externalServiceKind]}
+                                </Text>
                             </div>
                             <div className="d-flex justify-content-end">
                                 <Button
@@ -190,38 +231,33 @@ export const AddCredentialModal: React.FunctionComponent<AddCredentialModalProps
                                 >
                                     Cancel
                                 </Button>
-                                <Button
+                                <LoaderButton
                                     type="submit"
                                     disabled={loading || credential.length === 0}
                                     className="test-add-credential-modal-submit"
                                     variant="primary"
-                                >
-                                    {loading && <LoadingSpinner />}
-                                    {requiresSSH ? 'Next' : 'Add credential'}
-                                </Button>
+                                    loading={loading}
+                                    alwaysShowLabel={true}
+                                    label={requiresSSH ? 'Next' : 'Add credential'}
+                                />
                             </div>
                         </Form>
                     </>
                 )}
                 {step === 'get-ssh-key' && (
                     <>
-                        <p>
+                        <Text>
                             An SSH key has been generated for your batch changes code host connection. Copy the public
                             key below and enter it on your code host.
-                        </p>
+                        </Text>
                         <CodeHostSshPublicKey externalServiceKind={externalServiceKind} sshPublicKey={sshPublicKey!} />
-                        <div className="d-flex justify-content-end">
-                            <Button className="mr-2" onClick={afterCreate} outline={true} variant="secondary">
-                                Close
-                            </Button>
-                            <Button
-                                className="test-add-credential-modal-submit"
-                                onClick={afterCreate}
-                                variant="primary"
-                            >
-                                Add credential
-                            </Button>
-                        </div>
+                        <Button
+                            className="test-add-credential-modal-submit float-right"
+                            onClick={afterCreate}
+                            variant="primary"
+                        >
+                            Finish
+                        </Button>
                     </>
                 )}
             </div>

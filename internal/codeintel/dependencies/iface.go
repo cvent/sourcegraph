@@ -2,23 +2,23 @@ package dependencies
 
 import (
 	"context"
+	"io"
+	"time"
 
 	"github.com/sourcegraph/sourcegraph/internal/api"
-	"github.com/sourcegraph/sourcegraph/internal/codeintel/dependencies/store"
-	"github.com/sourcegraph/sourcegraph/internal/conf/reposource"
+	"github.com/sourcegraph/sourcegraph/internal/authz"
+	"github.com/sourcegraph/sourcegraph/internal/database"
+	"github.com/sourcegraph/sourcegraph/internal/gitserver"
+	"github.com/sourcegraph/sourcegraph/internal/gitserver/protocol"
+	"github.com/sourcegraph/sourcegraph/internal/types"
 )
 
-type Store interface {
-	ListDependencyRepos(ctx context.Context, opts store.ListDependencyReposOpts) ([]store.DependencyRepo, error)
-	UpsertDependencyRepos(ctx context.Context, deps []store.DependencyRepo) ([]store.DependencyRepo, error)
+type GitserverClient interface {
+	ArchiveReader(ctx context.Context, checker authz.SubRepoPermissionChecker, repo api.RepoName, options gitserver.ArchiveOptions) (io.ReadCloser, error)
+	RequestRepoUpdate(context.Context, api.RepoName, time.Duration) (*protocol.RepoUpdateResponse, error)
 }
 
-type LockfilesService interface {
-	ListDependencies(ctx context.Context, repo api.RepoName, rev string) ([]reposource.PackageDependency, error)
-}
-
-type Syncer interface {
-	// Sync will lazily sync the repos that have been inserted into the database but have not yet been
-	// cloned. See repos.Syncer.SyncRepo.
-	Sync(ctx context.Context, repo api.RepoName) error
+type ExternalServiceStore interface {
+	List(ctx context.Context, opt database.ExternalServicesListOptions) ([]*types.ExternalService, error)
+	Upsert(ctx context.Context, svcs ...*types.ExternalService) (err error)
 }
