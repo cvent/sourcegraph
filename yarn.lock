@@ -9132,10 +9132,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/simmerjs@npm:0.5.1":
-  version: 0.5.1
-  resolution: "@types/simmerjs@npm:0.5.1"
-  checksum: 391de9040fa6c656665789863bbe3a2539c9d71bb34f59f1d88712bded377b77853bb6e764fc0ffa39c0e62a709c0a53481595b96a4a89a842b669ad5d9cbbfe
+"@types/simmerjs@npm:0.5.5":
+  version: 0.5.5
+  resolution: "@types/simmerjs@npm:0.5.5"
+  checksum: 5dada270f768e289cd45019f60fe56c34d3b37e66254d2b14657142657408e63e7d444e415745d9c3f07a0e586f7d268436757e30e61698e4b7a0b75fe5879b2
   languageName: node
   linkType: hard
 
@@ -29385,7 +29385,7 @@ pvutils@latest:
     "@types/semver": 7.3.1
     "@types/shelljs": 0.8.8
     "@types/signale": 1.4.1
-    "@types/simmerjs": 0.5.1
+    "@types/simmerjs": 0.5.5
     "@types/sinon": 9.0.4
     "@types/socket.io": ^3.0.2
     "@types/socket.io-client": 1.4.33

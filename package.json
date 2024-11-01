@@ -219,7 +219,7 @@
     "@types/semver": "7.3.1",
     "@types/shelljs": "0.8.8",
     "@types/signale": "1.4.1",
-    "@types/simmerjs": "0.5.1",
+    "@types/simmerjs": "0.5.5",
     "@types/sinon": "9.0.4",
     "@types/socket.io": "^3.0.2",
     "@types/socket.io-client": "1.4.33",
