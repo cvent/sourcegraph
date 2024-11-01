@@ -8145,12 +8145,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/d3-axis@npm:1.0.12":
-  version: 1.0.12
-  resolution: "@types/d3-axis@npm:1.0.12"
+"@types/d3-axis@npm:1.0.19":
+  version: 1.0.19
+  resolution: "@types/d3-axis@npm:1.0.19"
   dependencies:
-    "@types/d3-selection": "*"
-  checksum: 63fb27d0c8a552c0745ff5d926b45c94e426fea3ef356de35f7ad7791f412c208bfa86002a177c0cb2d931c4a520bc26d63a903cb718ed4d906ee21a1b9a6411
+    "@types/d3-selection": ^1
+  checksum: 31aafa027205f1a17af000295200cc8f20082ba2947ccbdfedb806aec2a8eef635c3e892d202ff42e287579d7a5d9d0892ea36c281ec6d958693e985939b0dcb
   languageName: node
   linkType: hard
 
@@ -8202,10 +8202,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/d3-selection@npm:*, @types/d3-selection@npm:1.4.1":
+"@types/d3-selection@npm:1.4.1":
   version: 1.4.1
   resolution: "@types/d3-selection@npm:1.4.1"
   checksum: 5751a4eb9a0fcd1d6980f888c6e1c5ff536299f60e0d0f408db94413c44353f10bd850ee9396ad5af3393f8e3af5f76888d60da576c27287b1929850f562b5d2
+  languageName: node
+  linkType: hard
+
+"@types/d3-selection@npm:^1":
+  version: 1.4.7
+  resolution: "@types/d3-selection@npm:1.4.7"
+  checksum: 267fe5916fac70c12a8055366f18edf2573199bbabc7c735622dea4bd0018c634328a5b251cf7cf7eb2168b2ac993807042a948ed211908cde6cf37f5e61a5f5
   languageName: node
   linkType: hard
 
@@ -29335,7 +29342,7 @@ pvutils@latest:
     "@types/compression-webpack-plugin": 9.0.0
     "@types/connect-history-api-fallback": 1.3.4
     "@types/css-minimizer-webpack-plugin": 3.0.1
-    "@types/d3-axis": 1.0.12
+    "@types/d3-axis": 1.0.19
     "@types/d3-format": 2.0.0
     "@types/d3-scale": 2.2.0
     "@types/d3-selection": 1.4.1
