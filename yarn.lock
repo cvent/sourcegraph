@@ -8564,10 +8564,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/js-yaml@npm:4.0.3":
-  version: 4.0.3
-  resolution: "@types/js-yaml@npm:4.0.3"
-  checksum: 4be74c029f3fe4ab01f382481521c15bc79c96589747f588f8d3b92e97b8e04ffbe208451d24c99fd289593ff5325710eb83d267c8f2449d3248299f909003d7
+"@types/js-yaml@npm:4.0.9":
+  version: 4.0.9
+  resolution: "@types/js-yaml@npm:4.0.9"
+  checksum: e5e5e49b5789a29fdb1f7d204f82de11cb9e8f6cb24ab064c616da5d6e1b3ccfbf95aa5d1498a9fbd3b9e745564e69b4a20b6c530b5a8bbb2d4eb830cda9bc69
   languageName: node
   linkType: hard
 
@@ -29353,7 +29353,7 @@ pvutils@latest:
     "@types/jest": 27.4.0
     "@types/js-base64": ^3.3.1
     "@types/js-cookie": 2.2.6
-    "@types/js-yaml": 4.0.3
+    "@types/js-yaml": 4.0.9
     "@types/jsdom": 12.2.4
     "@types/lodash": 4.14.167
     "@types/lru-cache": ^7.6.1
