@@ -8048,13 +8048,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/chrome@npm:0.0.127":
-  version: 0.0.127
-  resolution: "@types/chrome@npm:0.0.127"
+"@types/chrome@npm:0.0.279":
+  version: 0.0.279
+  resolution: "@types/chrome@npm:0.0.279"
   dependencies:
     "@types/filesystem": "*"
     "@types/har-format": "*"
-  checksum: 2b12e5c3b33490def9f7468e8f1b8e2b061a8482d39b4f2b6654293e77871943665a707bb50433d20a23fef76e9db98833e031128a105a5a48250651cd348750
+  checksum: 718f9a4603a2b1d6cb6a54c327880cf8baefb2c67bf1e34b1b34e191421014e4340fb624513eb734d295f4833077e67cfac532603214dcf7fc51220539d41cfb
   languageName: node
   linkType: hard
 
@@ -29328,7 +29328,7 @@ pvutils@latest:
     "@types/case-sensitive-paths-webpack-plugin": 2.1.5
     "@types/chai": 4.2.14
     "@types/chai-as-promised": 7.1.3
-    "@types/chrome": 0.0.127
+    "@types/chrome": 0.0.279
     "@types/classnames": 2.2.10
     "@types/command-exists": 1.2.0
     "@types/compression": 1.7.2
