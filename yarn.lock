@@ -8557,10 +8557,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/js-cookie@npm:2.2.6":
-  version: 2.2.6
-  resolution: "@types/js-cookie@npm:2.2.6"
-  checksum: 97c50ff6cd0a27409b028aad94b0c4eb5cc43623532a1bdbbcccdb200539593eff3cc7f0d874b6b9bee586167638e3a10093c811ff6603ff2a9639564c82b3b1
+"@types/js-cookie@npm:2.2.7":
+  version: 2.2.7
+  resolution: "@types/js-cookie@npm:2.2.7"
+  checksum: 851f47e94ca1fc43661d8f51614d67a613e7810c91b876d0a3b311ce72f7df800107fd02a08cb6948184e12c120b4f058edca2f50424d8798bdcffd6627281e3
   languageName: node
   linkType: hard
 
@@ -29352,7 +29352,7 @@ pvutils@latest:
     "@types/is-absolute-url": 3.0.0
     "@types/jest": 27.4.0
     "@types/js-base64": ^3.3.1
-    "@types/js-cookie": 2.2.6
+    "@types/js-cookie": 2.2.7
     "@types/js-yaml": 4.0.3
     "@types/jsdom": 12.2.4
     "@types/lodash": 4.14.167
