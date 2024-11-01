@@ -198,7 +198,7 @@
     "@types/mocha": "8.2.0",
     "@types/mock-require": "^2.0.1",
     "@types/mockdate": "2.0.0",
-    "@types/mz": "2.7.3",
+    "@types/mz": "2.7.8",
     "@types/node": "13.13.5",
     "@types/node-fetch": "2.5.10",
     "@types/pollyjs__core": "4.3.1",

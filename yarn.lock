@@ -8734,12 +8734,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/mz@npm:2.7.3":
-  version: 2.7.3
-  resolution: "@types/mz@npm:2.7.3"
+"@types/mz@npm:2.7.8":
+  version: 2.7.8
+  resolution: "@types/mz@npm:2.7.8"
   dependencies:
     "@types/node": "*"
-  checksum: 06e6690cc8a7a9eed00c8c2584a064ae24108f8c8b7b4772db15cd22ac07d31ca5783f270c814d3c89d3c42a4adf4c2650a32eb79529e38add60d354a0d8bfaf
+  checksum: e677575b150ae1f88f94850ea149591b7746c2fbd49507617b5523be755be874b9b8094650d41197fa8c70eca7e5d2e70a1e446870cac1bdd80ebd66d72684b4
   languageName: node
   linkType: hard
 
@@ -29363,7 +29363,7 @@ pvutils@latest:
     "@types/mocha": 8.2.0
     "@types/mock-require": ^2.0.1
     "@types/mockdate": 2.0.0
-    "@types/mz": 2.7.3
+    "@types/mz": 2.7.8
     "@types/node": 13.13.5
     "@types/node-fetch": 2.5.10
     "@types/pollyjs__core": 4.3.1
