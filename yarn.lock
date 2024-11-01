@@ -8065,10 +8065,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/command-exists@npm:1.2.0":
-  version: 1.2.0
-  resolution: "@types/command-exists@npm:1.2.0"
-  checksum: 7c5a626c38898d0267375dbf24ea374e6fcc8a85837f38eeb4485a5699a905eda89941059ea4f82ffc92b2207b29bdd7f7ab8dcbae95ed661b65cafe958e3fb1
+"@types/command-exists@npm:1.2.3":
+  version: 1.2.3
+  resolution: "@types/command-exists@npm:1.2.3"
+  checksum: c90ed5f3c36d2ed5cb390d1a2e7263daabdeb18a2e20eb71bef83b0823980ee81ca773417b4d8a50fc61ede274b96d30f9b3ab836e1ecebfba5df27677cfc5fc
   languageName: node
   linkType: hard
 
@@ -29330,7 +29330,7 @@ pvutils@latest:
     "@types/chai-as-promised": 7.1.3
     "@types/chrome": 0.0.127
     "@types/classnames": 2.2.10
-    "@types/command-exists": 1.2.0
+    "@types/command-exists": 1.2.3
     "@types/compression": 1.7.2
     "@types/compression-webpack-plugin": 9.0.0
     "@types/connect-history-api-fallback": 1.3.4
