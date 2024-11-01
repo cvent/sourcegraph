@@ -9187,12 +9187,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/speed-measure-webpack-plugin@npm:1.3.4":
-  version: 1.3.4
-  resolution: "@types/speed-measure-webpack-plugin@npm:1.3.4"
+"@types/speed-measure-webpack-plugin@npm:1.3.6":
+  version: 1.3.6
+  resolution: "@types/speed-measure-webpack-plugin@npm:1.3.6"
   dependencies:
     "@types/webpack": ^4
-  checksum: 4373f983da401bfb3cae8e1b03e722fa5b1985755fc92f0cb80ff0ee1e48a87f9902a4a91da67e2c062f77bb1a9ea93f6ec8c88c1827219d56e682dd98f6b56d
+  checksum: f4464eedadbf974673c1da36031c37c47ea5d871ea2af083fbafb28e93c467152be24ec3a01032e262c5fa14bf9503065c695807c1fd4b0cbb7cafd4d46e7152
   languageName: node
   linkType: hard
 
@@ -29389,7 +29389,7 @@ pvutils@latest:
     "@types/sinon": 9.0.4
     "@types/socket.io": ^3.0.2
     "@types/socket.io-client": 1.4.33
-    "@types/speed-measure-webpack-plugin": 1.3.4
+    "@types/speed-measure-webpack-plugin": 1.3.6
     "@types/svgo": 2.6.0
     "@types/terser-webpack-plugin": 5.0.4
     "@types/testing-library__jest-dom": 5.9.5
