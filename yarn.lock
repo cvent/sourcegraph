@@ -8827,13 +8827,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/pollyjs__core@npm:*, @types/pollyjs__core@npm:4.3.1":
+"@types/pollyjs__core@npm:*":
   version: 4.3.1
   resolution: "@types/pollyjs__core@npm:4.3.1"
   dependencies:
     "@types/pollyjs__adapter": "*"
     "@types/pollyjs__persister": "*"
   checksum: 194987bb683cfdda80cea07fad3085fcb9da47d5fac1f5734950e6cac1244ef6c867904118edb4212eff75a3a10c64e7ad9ebe3c70e1e4d8c6acbe6f3f97bc2d
+  languageName: node
+  linkType: hard
+
+"@types/pollyjs__core@npm:4.3.3":
+  version: 4.3.3
+  resolution: "@types/pollyjs__core@npm:4.3.3"
+  dependencies:
+    "@types/pollyjs__adapter": "*"
+    "@types/pollyjs__persister": "*"
+  checksum: 6f17f44838b8a97e6340d4d50e7f0ffa3274b79a206b2fd8b6c8d9d4c8563b7191e21b5796fabf6dae508ab5bba9a3892b521ba3604f46858adb6a3d71227d16
   languageName: node
   linkType: hard
 
@@ -29366,7 +29376,7 @@ pvutils@latest:
     "@types/mz": 2.7.3
     "@types/node": 13.13.5
     "@types/node-fetch": 2.5.10
-    "@types/pollyjs__core": 4.3.1
+    "@types/pollyjs__core": 4.3.3
     "@types/pollyjs__persister-fs": 2.0.1
     "@types/puppeteer": ^5.4.5
     "@types/react": 18.0.8
