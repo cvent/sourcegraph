@@ -3831,6 +3831,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@microsoft/fast-element@npm:^1.14.0":
+  version: 1.14.0
+  resolution: "@microsoft/fast-element@npm:1.14.0"
+  checksum: 58765739492997a5c51f7841cf6f334e2d2c4ad2365db4a228c07df1c89d139b026abf6afc6691ac48066070d3c94d09afdea2929bdca25842f778293e19892d
+  languageName: node
+  linkType: hard
+
 "@microsoft/fast-element@npm:^1.6.2, @microsoft/fast-element@npm:^1.7.0":
   version: 1.7.0
   resolution: "@microsoft/fast-element@npm:1.7.0"
@@ -3838,7 +3845,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@microsoft/fast-foundation@npm:^2.30.0, @microsoft/fast-foundation@npm:^2.32.2":
+"@microsoft/fast-foundation@npm:^2.32.2":
   version: 2.32.2
   resolution: "@microsoft/fast-foundation@npm:2.32.2"
   dependencies:
@@ -3847,6 +3854,18 @@ __metadata:
     tabbable: ^5.2.0
     tslib: ^1.13.0
   checksum: dc7bf614f7b32f8905dac301f40e6419ebfdd5217bad241b22fd5f20cfd08d4cbe6f254ca2e53178eb125470c2a233e5b1a502aba0a3e3150f437e19ceb7dd0d
+  languageName: node
+  linkType: hard
+
+"@microsoft/fast-foundation@npm:^2.34.0":
+  version: 2.50.0
+  resolution: "@microsoft/fast-foundation@npm:2.50.0"
+  dependencies:
+    "@microsoft/fast-element": ^1.14.0
+    "@microsoft/fast-web-utilities": ^5.4.1
+    tabbable: ^5.2.0
+    tslib: ^1.13.0
+  checksum: 651501eb8cd5a3e583638f70a4e7c0ad30952fe12adedd5c4c24861515d0aaeec0e83d1f1cd25dece899d2fa1614b415001c461f76bb84b20e1a8e18a3fcf219
   languageName: node
   linkType: hard
 
@@ -3868,6 +3887,15 @@ __metadata:
   dependencies:
     exenv-es6: ^1.0.0
   checksum: ea26477d335b48b27f3e8aa76f0a2357655bf00a8ef882e5a8de6adc4987f7df405211ec7631cbe593b2093bffd3c3b892d691bc7f26a31c808a8d101488d172
+  languageName: node
+  linkType: hard
+
+"@microsoft/fast-web-utilities@npm:^5.4.1":
+  version: 5.4.1
+  resolution: "@microsoft/fast-web-utilities@npm:5.4.1"
+  dependencies:
+    exenv-es6: ^1.1.1
+  checksum: 303e87847f962944f474e3716c3eb305668243916ca9e0719e26bb9a32346144bc958d915c103776b3e552cea0f0f6233f839fad66adfdf96a8436b947288ca7
   languageName: node
   linkType: hard
 
@@ -9913,16 +9941,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vscode/webview-ui-toolkit@npm:^0.9.0":
-  version: 0.9.0
-  resolution: "@vscode/webview-ui-toolkit@npm:0.9.0"
+"@vscode/webview-ui-toolkit@npm:^0.9.3":
+  version: 0.9.3
+  resolution: "@vscode/webview-ui-toolkit@npm:0.9.3"
   dependencies:
     "@microsoft/fast-element": ^1.6.2
-    "@microsoft/fast-foundation": ^2.30.0
+    "@microsoft/fast-foundation": ^2.34.0
     "@microsoft/fast-react-wrapper": ^0.1.18
   peerDependencies:
     react: ">=16.9.0"
-  checksum: 635f9d0879afcc2f63a92a2a1a69abb4a4697eaa651166856c96dba6b885b1c03d6f80e17a683da4c2e089b3c2e4c4461ef96b663198b7a00194ba68e8ec9295
+  checksum: 44c4bf7e13f505574e5b4b359c73a0a17caf2063b9607241ebe75287b77fee711e7cccc299235d7d51339242e5b799c9dfbc019026fa677830c7f6d69f88d1a0
   languageName: node
   linkType: hard
 
@@ -17250,6 +17278,13 @@ __metadata:
   version: 1.0.0
   resolution: "exenv-es6@npm:1.0.0"
   checksum: 6f36d69a83bdc84a5dedacaaa2d746e0439426e0038ed0b4ee6db1cbc153bf72ed4e1fa2d322f63170914f5e892425604044c0af64057bfcc88a3dde0fa65eab
+  languageName: node
+  linkType: hard
+
+"exenv-es6@npm:^1.1.1":
+  version: 1.1.1
+  resolution: "exenv-es6@npm:1.1.1"
+  checksum: 7f2aa12025e6f06c48dc286f380cf3183bb19c6017b36d91695034a3e5124a7235c4f8ff24ca2eb88ae801322f0f99605cedfcfd996a5fcbba7669320e2a448e
   languageName: node
   linkType: hard
 
@@ -29411,7 +29446,7 @@ pvutils@latest:
     "@visx/voronoi": ^2.10.0
     "@vscode/codicons": ^0.0.29
     "@vscode/test-electron": ^2.1.3
-    "@vscode/webview-ui-toolkit": ^0.9.0
+    "@vscode/webview-ui-toolkit": ^0.9.3
     abort-controller: ^3.0.0
     ajv: ^8.6.3
     ajv-formats: ^2.1.1

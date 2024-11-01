@@ -401,7 +401,7 @@
     "@visx/scale": "^2.2.2",
     "@visx/voronoi": "^2.10.0",
     "@vscode/codicons": "^0.0.29",
-    "@vscode/webview-ui-toolkit": "^0.9.0",
+    "@vscode/webview-ui-toolkit": "^0.9.3",
     "ajv": "^8.6.3",
     "ajv-formats": "^2.1.1",
     "apollo3-cache-persist": "^0.12.1",
