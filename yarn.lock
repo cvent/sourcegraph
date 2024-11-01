@@ -9471,7 +9471,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/yauzl@npm:^2.9.1, @types/yauzl@npm:^2.9.2":
+"@types/yauzl@npm:^2.10.0":
+  version: 2.10.3
+  resolution: "@types/yauzl@npm:2.10.3"
+  dependencies:
+    "@types/node": "*"
+  checksum: 5ee966ea7bd6b2802f31ad4281c92c4c0b6dfa593c378a2582c58541fa113bec3d70eb0696b34ad95e8e6861a884cba6c3e351285816693ed176222f840a8c08
+  languageName: node
+  linkType: hard
+
+"@types/yauzl@npm:^2.9.1":
   version: 2.10.0
   resolution: "@types/yauzl@npm:2.10.0"
   dependencies:
@@ -29400,7 +29409,7 @@ pvutils@latest:
     "@types/webpack-dev-server": 4.0.3
     "@types/webpack-manifest-plugin": 3.0.5
     "@types/webpack-stats-plugin": ^0.3.2
-    "@types/yauzl": ^2.9.2
+    "@types/yauzl": ^2.10.0
     "@visx/annotation": ^2.10.0
     "@visx/axis": ^2.11.1
     "@visx/glyph": ^2.10.0
