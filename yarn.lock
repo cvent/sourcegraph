@@ -7968,10 +7968,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/bloomfilter@npm:0.0.0":
-  version: 0.0.0
-  resolution: "@types/bloomfilter@npm:0.0.0"
-  checksum: 5ed768143024ed510f2710a61f45d35a7c54c76b18fdd3659c82652518e661f3f9826f2c7841e77422490aed86293c527ce3672d00cbf81961a16e115e13aaf1
+"@types/bloomfilter@npm:0.0.2":
+  version: 0.0.2
+  resolution: "@types/bloomfilter@npm:0.0.2"
+  checksum: ace484ac234dcf9b86225e77c60789a76f067c496ccb7270c2cf9b215aff5fcfcb3f473f92ada7d9ea9620512b73e426f712187406d32ba16d24f07e163bd9ac
   languageName: node
   linkType: hard
 
@@ -29324,7 +29324,7 @@ pvutils@latest:
     "@testing-library/react-hooks": ^8.0.0
     "@testing-library/user-event": ^13.5.0
     "@types/babel__core": 7.1.12
-    "@types/bloomfilter": 0.0.0
+    "@types/bloomfilter": 0.0.2
     "@types/case-sensitive-paths-webpack-plugin": 2.1.5
     "@types/chai": 4.2.14
     "@types/chai-as-promised": 7.1.3
