@@ -8760,10 +8760,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:13.13.5":
-  version: 13.13.5
-  resolution: "@types/node@npm:13.13.5"
-  checksum: 874bb45920a33d18619c19687425628ae536a28d3342c781f5c84e0ac41f3f6cbb5afda1b2d366e232a7862cbf44ba559c1775fc9db875388148d7f893f64ad0
+"@types/node@npm:13.13.52":
+  version: 13.13.52
+  resolution: "@types/node@npm:13.13.52"
+  checksum: 8f1afff497ebeba209e2dc340d823284e087a47632afe99a7daa30eaff80893e520f222ad400cd1f2d3b8288e93cf3eaded52a8e64eaefb8aacfe6c35de98f42
   languageName: node
   linkType: hard
 
@@ -29364,7 +29364,7 @@ pvutils@latest:
     "@types/mock-require": ^2.0.1
     "@types/mockdate": 2.0.0
     "@types/mz": 2.7.3
-    "@types/node": 13.13.5
+    "@types/node": 13.13.52
     "@types/node-fetch": 2.5.10
     "@types/pollyjs__core": 4.3.1
     "@types/pollyjs__persister-fs": 2.0.1
